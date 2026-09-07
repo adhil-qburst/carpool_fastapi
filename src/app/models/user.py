@@ -3,12 +3,12 @@ from datetime import datetime
 
 from sqlalchemy import DateTime
 from sqlalchemy import Enum as SQLEnum
-from sqlalchemy import String, func
+from sqlalchemy import String, func, Boolean
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
-from app.domain.users.enums import UserRole
+from app.domain.users.enums import UserRole, UserStatus
 
 
 class User(Base):
@@ -46,6 +46,23 @@ class User(Base):
         ),
         nullable=False,
         default=list,
+    )
+    
+    status: Mapped[UserStatus] = mapped_column(
+        SQLEnum(
+            UserStatus,
+            name="user_status"
+        ),
+        nullable=False,
+        default=UserStatus.PENDING,
+        server_default=UserStatus.PENDING.value
+    )
+    
+    is_email_verified: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
     )
 
     created_at: Mapped[datetime] = mapped_column(
