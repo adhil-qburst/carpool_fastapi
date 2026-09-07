@@ -9,6 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 from app.domain.users.enums import UserRole, UserStatus
+from app.models.email_verification_token import EmailVerificationToken
 
 
 class User(Base):
