@@ -59,5 +59,4 @@ def register_user(
             session.rollback()
             raise EmailDeliveryError from exc
 
-        
     session.commit()

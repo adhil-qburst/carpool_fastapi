@@ -37,7 +37,8 @@ def register(
     return RegisterResponse(
         message="Registration successful. Please check your email to verify your account.",
     )
-    
+
+
 @router.get(
     "/verify-email",
     status_code=status.HTTP_200_OK,

@@ -10,7 +10,7 @@ class AppError(Exception):
 
 class EmailAlreadyRegisteredError(AppError):
     def __init__(self, user: User) -> None:
-        self.user: User = user 
+        self.user: User = user
         super().__init__(
             "An account with this email already exists.",
             "EMAIL_ALREADY_REGISTERED",
