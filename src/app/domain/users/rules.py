@@ -8,4 +8,4 @@ def normalize_email(email: str) -> str:
 
 def ensure_email_is_available(existing_user: User | None) -> None:
     if existing_user is not None:
-        raise EmailAlreadyRegisteredError
+        raise EmailAlreadyRegisteredError(existing_user)

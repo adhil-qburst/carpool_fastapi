@@ -1,9 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import EmailAlreadyRegisteredError, EmailDeliveryError
 from app.db.session import get_db
 from app.schemas.auth.register import RegisterRequest, RegisterResponse
+from app.schemas.auth.verify_email import VerifyEmailResponse
 from app.services.auth.register import register_user
 
 router = APIRouter()
@@ -33,4 +36,15 @@ def register(
 
     return RegisterResponse(
         message="Registration successful. Please check your email to verify your account.",
+    )
+    
+@router.get(
+    "/verify-email",
+    status_code=status.HTTP_200_OK,
+)
+async def verify_email(
+    token: UUID = Query(..., description="Email verification token."),
+):
+    return VerifyEmailResponse(
+        message="Your email is verified, Please login to your account."
     )

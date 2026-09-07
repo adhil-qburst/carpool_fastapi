@@ -1,3 +1,6 @@
+from app.models.user import User
+
+
 class AppError(Exception):
     def __init__(self, detail: str, code: str | None = None) -> None:
         self.detail = detail
@@ -6,7 +9,8 @@ class AppError(Exception):
 
 
 class EmailAlreadyRegisteredError(AppError):
-    def __init__(self) -> None:
+    def __init__(self, user: User) -> None:
+        self.user: User = user 
         super().__init__(
             "An account with this email already exists.",
             "EMAIL_ALREADY_REGISTERED",

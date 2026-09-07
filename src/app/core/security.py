@@ -1,5 +1,6 @@
 import hashlib
 import secrets
+import uuid
 
 import bcrypt
 
@@ -16,7 +17,7 @@ def verify_password(password: str, password_hash: str) -> bool:
 
 
 def generate_verification_token() -> str:
-    return secrets.token_urlsafe(32)
+    return str(uuid.uuid4())
 
 
 def hash_token(token: str) -> str:
