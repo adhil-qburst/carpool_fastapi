@@ -1,9 +1,9 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime
+from sqlalchemy import Boolean, DateTime
 from sqlalchemy import Enum as SQLEnum
-from sqlalchemy import String, func, Boolean
+from sqlalchemy import String, func
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -47,17 +47,14 @@ class User(Base):
         nullable=False,
         default=list,
     )
-    
+
     status: Mapped[UserStatus] = mapped_column(
-        SQLEnum(
-            UserStatus,
-            name="user_status"
-        ),
+        SQLEnum(UserStatus, name="user_status"),
         nullable=False,
         default=UserStatus.PENDING,
-        server_default=UserStatus.PENDING.value
+        server_default=UserStatus.PENDING.value,
     )
-    
+
     is_email_verified: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,

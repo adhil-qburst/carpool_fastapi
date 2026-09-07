@@ -1,8 +1,8 @@
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 revision: str = "f007e60ce439"
 down_revision: Union[str, Sequence[str], None] = "eb5a16cfb02e"

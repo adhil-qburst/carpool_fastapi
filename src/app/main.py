@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 
-
 app = FastAPI(
     title="CarPool API",
     version="0.1.0",
