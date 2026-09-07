@@ -8,6 +8,7 @@ from alembic import context
 from app.db.base import Base
 from app.models.booking import Booking
 from app.models.location import Location
+from app.models.review import Review
 from app.models.route import Route
 from app.models.route_stop import RouteStop
 from app.models.trip import Trip
