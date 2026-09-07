@@ -8,9 +8,10 @@ from alembic import context
 from app.db.base import Base
 from app.models.location import Location
 from app.models.route import Route
+from app.models.route_stop import RouteStop
+from app.models.trip import Trip
 from app.models.user import User
 from app.models.vehicle import Vehicle
-from app.models.route_stop import RouteStop
 
 load_dotenv()
 
