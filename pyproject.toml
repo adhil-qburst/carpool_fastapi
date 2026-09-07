@@ -9,6 +9,7 @@ dependencies = [
     "black>=26.5.1",
     "fastapi>=0.141.1",
     "isort>=9.0.1",
+    "psycopg[binary]>=3.3.5",
     "psycopg2-binary>=2.9.12",
     "python-dotenv>=1.2.3",
     "sqlalchemy>=2.0.52",
