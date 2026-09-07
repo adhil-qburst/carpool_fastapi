@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime
 from sqlalchemy import Enum as SQLEnum
@@ -9,7 +12,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 from app.domain.users.enums import UserRole, UserStatus
-from app.models.email_verification_token import EmailVerificationToken
+
+if TYPE_CHECKING:
+    from app.models.email_verification_token import EmailVerificationToken
 
 
 class User(Base):
@@ -43,6 +48,7 @@ class User(Base):
             SQLEnum(
                 UserRole,
                 name="user_role",
+                values_callable=lambda enum: [member.value for member in enum],
             )
         ),
         nullable=False,
@@ -50,7 +56,11 @@ class User(Base):
     )
 
     status: Mapped[UserStatus] = mapped_column(
-        SQLEnum(UserStatus, name="user_status"),
+        SQLEnum(
+            UserStatus,
+            name="user_status",
+            values_callable=lambda enum: [member.value for member in enum],
+        ),
         nullable=False,
         default=UserStatus.PENDING,
         server_default=UserStatus.PENDING.value,

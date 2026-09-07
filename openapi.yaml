@@ -31,13 +31,18 @@ paths:
               $ref: '#/components/schemas/RegisterRequest'
       responses:
         '201':
-          description: User registered
+          description: User registered; verification email sent
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthResponse'
+                $ref: '#/components/schemas/RegisterResponse'
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: Verification email could not be sent
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
   /auth/login:
     post:
@@ -458,6 +463,11 @@ components:
           type: array
           minItems: 1
           items: { $ref: '#/components/schemas/UserRole' }
+    RegisterResponse:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string }
     LoginRequest:
       type: object
       required: [email, password]
