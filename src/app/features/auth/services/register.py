@@ -6,7 +6,7 @@ from app.features.auth.exceptions import EmailAlreadyRegisteredError, EmailDeliv
 from app.features.auth.schemas.register import RegisterRequest
 from app.features.auth.services.send_email_token import send_email_token
 from app.features.users.domain.rules import ensure_email_is_available, normalize_email
-from app.features.users.repositories import users as users_repo
+from app.features.users.repositories.users import UserRepo
 
 
 def register_user(
@@ -18,9 +18,11 @@ def register_user(
     settings = settings or get_settings()
 
     email = normalize_email(payload.email)
+    user_repo = UserRepo()
+
     try:
-        ensure_email_is_available(users_repo.get_by_email(session, email))
-        user = users_repo.create_user(
+        ensure_email_is_available(user_repo.get_by_email(session, email))
+        user = user_repo.create_user(
             session,
             name=payload.name.strip(),
             email=email,

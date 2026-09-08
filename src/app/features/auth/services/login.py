@@ -15,7 +15,7 @@ from app.features.auth.exceptions import (
 from app.features.auth.services.send_email_token import send_email_token
 from app.features.users.domain.enums import UserStatus
 from app.features.users.models.user import User
-from app.features.users.repositories import users as UserRepo
+from app.features.users.repositories.users import UserRepo
 
 
 def login_with_email_password(
@@ -27,8 +27,9 @@ def login_with_email_password(
 ) -> AuthToken:
     settings = settings or get_settings()
     try:
+        user_repo = UserRepo()
 
-        user: User = UserRepo.get_by_email(session=session, email=email)
+        user: User = user_repo.get_by_email(session=session, email=email)
 
         if user is None:
             raise EmailNotFoundError
