@@ -13,6 +13,7 @@ from app.features.auth.exceptions import (
     InvalidCredentialError,
     InvalidEmailVerificationTokenError,
     UserDisabledError,
+    RegisteredUserError,
 )
 from app.features.auth.schemas.login import LoginRequest, LoginResponse
 from app.features.auth.schemas.register import RegisterRequest, RegisterResponse
@@ -40,6 +41,11 @@ def register(
             detail=exc.detail,
         ) from exc
     except EmailDeliveryError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=exc.detail,
+        ) from exc
+    except RegisteredUserError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=exc.detail,

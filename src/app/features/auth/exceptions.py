@@ -47,3 +47,7 @@ class EmailNotFoundError(AppError):
 class UserDisabledError(AppError):
     def __init__(self):
         super()._init__("User account is disabled.", "USER_DISABLED")
+        
+class RegisteredUserError(AppError):
+    def __init__(self):
+        super().__init__("User is already registered. Please login with your email.", "REGISTERED_USER")
