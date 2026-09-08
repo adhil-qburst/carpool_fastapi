@@ -39,3 +39,7 @@ class UserRepo:
 
     def verification_expiry(self, hours: int) -> datetime:
         return datetime.now(timezone.utc) + timedelta(hours=hours)
+
+
+def get_user_repo() -> UserRepo:
+    return UserRepo()

@@ -15,7 +15,7 @@ from app.features.auth.exceptions import (
 from app.features.auth.services.send_email_token import send_email_token
 from app.features.users.domain.enums import UserStatus
 from app.features.users.models.user import User
-from app.features.users.repositories.users import UserRepo
+from app.features.users.repositories.users import get_user_repo
 
 
 def login_with_email_password(
@@ -27,7 +27,7 @@ def login_with_email_password(
 ) -> AuthToken:
     settings = settings or get_settings()
     try:
-        user_repo = UserRepo()
+        user_repo = get_user_repo()
 
         user: User = user_repo.get_by_email(session=session, email=email)
 
