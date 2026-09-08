@@ -3,13 +3,12 @@ from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.exceptions import (
-    EmailAlreadyRegisteredError,
+from app.db.session import get_db
+from app.features.auth.api import auth
+from app.features.auth.exceptions import (
     EmailDeliveryError,
     InvalidEmailVerificationTokenError,
 )
-from app.db.session import get_db
-from app.features.auth.api import auth
 from app.features.users.domain.enums import UserRole
 from app.features.users.models.user import User
 from app.main import app

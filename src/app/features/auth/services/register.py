@@ -1,27 +1,22 @@
-from collections.abc import Callable
-
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
-from app.core.email import send_verification_email
-from app.core.exceptions import EmailAlreadyRegisteredError, EmailDeliveryError
-from app.core.security import generate_verification_token, hash_password, hash_token
+from app.core.security.password import hash_password
+from app.features.auth.exceptions import EmailAlreadyRegisteredError, EmailDeliveryError
 from app.features.auth.schemas.register import RegisterRequest
+from app.features.auth.services.send_email_token import send_email_token
 from app.features.users.domain.rules import ensure_email_is_available, normalize_email
-from app.features.users.repositories import email_verification_tokens as token_repo
 from app.features.users.repositories import users as users_repo
-
-SendVerificationEmail = Callable[[str, str], None]
 
 
 def register_user(
     session: Session,
     payload: RegisterRequest,
     *,
-    send_email: SendVerificationEmail | None = None,
     settings: Settings | None = None,
 ) -> None:
     settings = settings or get_settings()
+
     email = normalize_email(payload.email)
     try:
         ensure_email_is_available(users_repo.get_by_email(session, email))
@@ -38,21 +33,10 @@ def register_user(
         user.password_hash = hash_password(payload.password)
         user.roles = payload.roles
 
-    raw_token = generate_verification_token()
-    token_repo.create(
-        session,
-        user_id=user.id,
-        token_hash=hash_token(raw_token),
-        expires_at=users_repo.verification_expiry(
-            settings.email_verification_expire_hours
-        ),
-    )
-
-    dispatch = send_email or (
-        lambda to, token: send_verification_email(to, token, settings=settings)
-    )
     try:
-        dispatch(email, raw_token)
+        send_email_token(
+            session=session, settings=settings, user_id=user.id, email=user.email
+        )
     except EmailDeliveryError:
         session.rollback()
         raise

@@ -5,15 +5,20 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.core.exceptions import (
+from app.db.session import get_db
+from app.features.auth.exceptions import (
     EmailAlreadyRegisteredError,
     EmailDeliveryError,
+    EmailNotFoundError,
+    InvalidCredentialError,
     InvalidEmailVerificationTokenError,
+    UserDisabledError,
 )
-from app.db.session import get_db
+from app.features.auth.schemas.login import LoginRequest, LoginResponse
 from app.features.auth.schemas.register import RegisterRequest, RegisterResponse
-from app.features.users.services.register import register_user
-from app.features.users.services.verify_email import verify_email as verify_user_email
+from app.features.auth.services.login import login_with_email_password
+from app.features.auth.services.register import register_user
+from app.features.auth.services.verify_email import verify_email as verify_user_email
 
 router = APIRouter()
 
@@ -65,3 +70,41 @@ def verify_email(
         url=get_settings().email_verification_success_url,
         status_code=status.HTTP_303_SEE_OTHER,
     )
+
+
+@router.post("login", status_code=status.HTTP_200_OK, response_model=LoginResponse)
+def login(
+    payload: LoginRequest,
+    db: Session = Depends(get_db),
+) -> LoginResponse:
+    try:
+        tokens = login_with_email_password(
+            session=db, email=payload.email, password=payload.password
+        )
+        return LoginResponse(
+            access_token=tokens.access_token, refresh_token=tokens.refresh_token
+        )
+
+    except InvalidCredentialError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=exc.detail,
+        ) from exc
+
+    except EmailNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=exc.detail,
+        ) from exc
+
+    except UserDisabledError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=exc.detail,
+        ) from exc
+
+    except EmailDeliveryError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=exc.detail,
+        ) from exc

@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     email_verification_expire_hours: int
     email_verification_success_url: str
 
+    jwt_secret: str
+    jwt_refresh_secret: str
+    jwt_algorithm: str
+
 
 @lru_cache
 def get_settings() -> Settings:

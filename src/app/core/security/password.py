@@ -1,7 +1,3 @@
-import hashlib
-import secrets
-import uuid
-
 import bcrypt
 
 
@@ -14,11 +10,3 @@ def verify_password(password: str, password_hash: str) -> bool:
         password.encode("utf-8"),
         password_hash.encode("utf-8"),
     )
-
-
-def generate_verification_token() -> str:
-    return str(uuid.uuid4())
-
-
-def hash_token(token: str) -> str:
-    return hashlib.sha256(token.encode("utf-8")).hexdigest()

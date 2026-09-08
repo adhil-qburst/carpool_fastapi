@@ -68,6 +68,8 @@ class User(Base):
         server_default=UserStatus.PENDING.value,
     )
 
+    last_login: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+
     is_email_verified: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,

@@ -3,8 +3,8 @@ from uuid import UUID
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import InvalidEmailVerificationTokenError
-from app.core.security import hash_token
+from app.core.security.verification_token import hash_token
+from app.features.auth.exceptions import InvalidEmailVerificationTokenError
 from app.features.users.domain.enums import UserStatus
 from app.features.users.repositories import email_verification_tokens as token_repo
 from app.features.users.repositories import users as users_repo

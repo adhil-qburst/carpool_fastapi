@@ -3,10 +3,10 @@ from uuid import UUID
 
 import pytest
 
-from app.core.exceptions import InvalidEmailVerificationTokenError
-from app.core.security import hash_token
+from app.core.security.verification_token import hash_token
+from app.features.auth.exceptions import InvalidEmailVerificationTokenError
+from app.features.auth.services import verify_email as verify_email_service
 from app.features.users.domain.enums import UserStatus
-from app.features.users.services import verify_email as verify_email_service
 
 
 class FakeSession:
