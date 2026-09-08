@@ -3,7 +3,9 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings
 from app.core.email import send_verification_email
 from app.core.security.verification_token import generate_verification_token, hash_token
-from app.features.users.repositories import email_verification_tokens as token_repo
+from app.features.users.repositories.email_verification_tokens import (
+    get_email_verification_token_repo,
+)
 from app.features.users.repositories.users import get_user_repo
 
 
@@ -11,7 +13,8 @@ def send_email_token(session: Session, settings: Settings, user_id: str, email: 
 
     raw_token = generate_verification_token()
     user_repo = get_user_repo()
-    token_repo.create(
+    email_verification_token_repo = get_email_verification_token_repo()
+    email_verification_token_repo.create(
         session,
         user_id=user_id,
         token_hash=hash_token(raw_token),
