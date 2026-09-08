@@ -12,8 +12,9 @@ from app.features.auth.exceptions import (
     EmailNotFoundError,
     InvalidCredentialError,
     InvalidEmailVerificationTokenError,
-    UserDisabledError,
     RegisteredUserError,
+    UnVerifiedUserError,
+    UserDisabledError,
 )
 from app.features.auth.schemas.login import LoginRequest, LoginResponse
 from app.features.auth.schemas.register import RegisterRequest, RegisterResponse
@@ -78,7 +79,7 @@ def verify_email(
     )
 
 
-@router.post("login", status_code=status.HTTP_200_OK, response_model=LoginResponse)
+@router.post("/login", status_code=status.HTTP_200_OK, response_model=LoginResponse)
 def login(
     payload: LoginRequest,
     db: Session = Depends(get_db),
@@ -104,6 +105,12 @@ def login(
         ) from exc
 
     except UserDisabledError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=exc.detail,
+        ) from exc
+
+    except UnVerifiedUserError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=exc.detail,
