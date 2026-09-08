@@ -12,15 +12,15 @@ class Settings(BaseSettings):
 
     database_url: str
 
-    smtp_host: str = "smtp.gmail.com"
-    smtp_port: int = 587
+    smtp_host: str
+    smtp_port: int
     smtp_user: str
     smtp_password: str
     smtp_from: str
-    smtp_use_tls: bool = True
+    smtp_use_tls: bool
 
-    email_verification_base_url: str = "http://localhost:3000/verify-email"
-    email_verification_expire_hours: int = 24
+    email_verification_base_url: str
+    email_verification_expire_hours: int
 
 
 @lru_cache
