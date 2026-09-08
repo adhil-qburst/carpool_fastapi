@@ -47,16 +47,16 @@ def register_user(
             ),
         )
 
-        dispatch = send_email or (
-            lambda to, token: send_verification_email(to, token, settings=settings)
-        )
-        try:
-            dispatch(email, raw_token)
-        except EmailDeliveryError:
-            session.rollback()
-            raise
-        except Exception as exc:
-            session.rollback()
-            raise EmailDeliveryError from exc
+    dispatch = send_email or (
+        lambda to, token: send_verification_email(to, token, settings=settings)
+    )
+    try:
+        dispatch(email, raw_token)
+    except EmailDeliveryError:
+        session.rollback()
+        raise
+    except Exception as exc:
+        session.rollback()
+        raise EmailDeliveryError from exc
 
     session.commit()
