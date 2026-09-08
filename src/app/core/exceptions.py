@@ -23,3 +23,11 @@ class EmailDeliveryError(AppError):
             "Could not send the verification email. Please try again.",
             "EMAIL_DELIVERY_FAILED",
         )
+
+
+class InvalidEmailVerificationTokenError(AppError):
+    def __init__(self) -> None:
+        super().__init__(
+            "The verification link is invalid, expired, or has already been used.",
+            "INVALID_EMAIL_VERIFICATION_TOKEN",
+        )

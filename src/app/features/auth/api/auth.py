@@ -1,13 +1,19 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import EmailAlreadyRegisteredError, EmailDeliveryError
+from app.core.config import get_settings
+from app.core.exceptions import (
+    EmailAlreadyRegisteredError,
+    EmailDeliveryError,
+    InvalidEmailVerificationTokenError,
+)
 from app.db.session import get_db
 from app.features.auth.schemas.register import RegisterRequest, RegisterResponse
-from app.features.auth.schemas.verify_email import VerifyEmailResponse
 from app.features.users.services.register import register_user
+from app.features.users.services.verify_email import verify_email as verify_user_email
 
 router = APIRouter()
 
@@ -41,11 +47,21 @@ def register(
 
 @router.get(
     "/verify-email",
-    status_code=status.HTTP_200_OK,
+    status_code=status.HTTP_303_SEE_OTHER,
 )
-async def verify_email(
+def verify_email(
     token: UUID = Query(..., description="Email verification token."),
-):
-    return VerifyEmailResponse(
-        message="Your email is verified, Please login to your account."
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    try:
+        verify_user_email(db, token)
+    except InvalidEmailVerificationTokenError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=exc.detail,
+        ) from exc
+
+    return RedirectResponse(
+        url=get_settings().email_verification_success_url,
+        status_code=status.HTTP_303_SEE_OTHER,
     )

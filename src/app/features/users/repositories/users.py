@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -30,6 +31,10 @@ def create_user(
     session.add(user)
     session.flush()
     return user
+
+
+def get_by_id(session: Session, user_id: UUID) -> User | None:
+    return session.get(User, user_id)
 
 
 def verification_expiry(hours: int) -> datetime:

@@ -1,7 +1,13 @@
+from types import SimpleNamespace
+
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.exceptions import EmailAlreadyRegisteredError, EmailDeliveryError
+from app.core.exceptions import (
+    EmailAlreadyRegisteredError,
+    EmailDeliveryError,
+    InvalidEmailVerificationTokenError,
+)
 from app.db.session import get_db
 from app.features.auth.api import auth
 from app.features.users.domain.enums import UserRole
@@ -116,6 +122,49 @@ def test_register_returns_service_unavailable_when_email_cannot_be_sent(
     assert response.status_code == 503
     assert response.json() == {
         "detail": "Could not send the verification email. Please try again."
+    }
+
+
+def test_verify_email_redirects_after_verifying_token(monkeypatch, client):
+    token = "4d0f14da-3c78-4247-8b97-70450dfc3e85"
+    captured = {}
+
+    def fake_verify_user_email(db, received_token):
+        captured["token"] = received_token
+
+    monkeypatch.setattr(auth, "verify_user_email", fake_verify_user_email)
+    monkeypatch.setattr(
+        auth,
+        "get_settings",
+        lambda: SimpleNamespace(
+            email_verification_success_url="http://frontend.test/success"
+        ),
+    )
+
+    response = client.get(
+        f"/api/v1/auth/verify-email?token={token}",
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "http://frontend.test/success"
+    assert str(captured["token"]) == token
+
+
+def test_verify_email_rejects_invalid_or_expired_token(monkeypatch, client):
+    def raise_invalid_token(db, token):
+        raise InvalidEmailVerificationTokenError()
+
+    monkeypatch.setattr(auth, "verify_user_email", raise_invalid_token)
+
+    response = client.get(
+        "/api/v1/auth/verify-email?token=4d0f14da-3c78-4247-8b97-70450dfc3e85",
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "detail": "The verification link is invalid, expired, or has already been used."
     }
 
 

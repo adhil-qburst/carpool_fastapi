@@ -21,6 +21,7 @@ class Settings(BaseSettings):
 
     email_verification_base_url: str
     email_verification_expire_hours: int
+    email_verification_success_url: str
 
 
 @lru_cache
