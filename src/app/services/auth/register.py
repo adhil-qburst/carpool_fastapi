@@ -36,16 +36,17 @@ def register_user(
         user = exc.user
         user.name = payload.name
         user.password_hash = hash_password(payload.password)
+        user.roles = payload.roles
 
-        raw_token = generate_verification_token()
-        token_repo.create(
-            session,
-            user_id=user.id,
-            token_hash=hash_token(raw_token),
-            expires_at=users_repo.verification_expiry(
-                settings.email_verification_expire_hours
-            ),
-        )
+    raw_token = generate_verification_token()
+    token_repo.create(
+        session,
+        user_id=user.id,
+        token_hash=hash_token(raw_token),
+        expires_at=users_repo.verification_expiry(
+            settings.email_verification_expire_hours
+        ),
+    )
 
     dispatch = send_email or (
         lambda to, token: send_verification_email(to, token, settings=settings)
