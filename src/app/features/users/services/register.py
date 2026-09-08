@@ -6,10 +6,10 @@ from app.core.config import Settings, get_settings
 from app.core.email import send_verification_email
 from app.core.exceptions import EmailAlreadyRegisteredError, EmailDeliveryError
 from app.core.security import generate_verification_token, hash_password, hash_token
-from app.domain.users.rules import ensure_email_is_available, normalize_email
-from app.repositories import email_verification_tokens as token_repo
-from app.repositories import users as users_repo
-from app.schemas.auth.register import RegisterRequest
+from app.features.auth.schemas.register import RegisterRequest
+from app.features.users.domain.rules import ensure_email_is_available, normalize_email
+from app.features.users.repositories import email_verification_tokens as token_repo
+from app.features.users.repositories import users as users_repo
 
 SendVerificationEmail = Callable[[str, str], None]
 

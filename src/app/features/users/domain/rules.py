@@ -1,5 +1,5 @@
 from app.core.exceptions import EmailAlreadyRegisteredError
-from app.models.user import User
+from app.features.users.models.user import User
 
 
 def normalize_email(email: str) -> str:

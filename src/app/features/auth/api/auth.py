@@ -5,9 +5,9 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import EmailAlreadyRegisteredError, EmailDeliveryError
 from app.db.session import get_db
-from app.schemas.auth.register import RegisterRequest, RegisterResponse
-from app.schemas.auth.verify_email import VerifyEmailResponse
-from app.services.auth.register import register_user
+from app.features.auth.schemas.register import RegisterRequest, RegisterResponse
+from app.features.auth.schemas.verify_email import VerifyEmailResponse
+from app.features.users.services.register import register_user
 
 router = APIRouter()
 

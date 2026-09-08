@@ -11,10 +11,12 @@ from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
-from app.domain.users.enums import UserRole, UserStatus
+from app.features.users.domain.enums import UserRole, UserStatus
 
 if TYPE_CHECKING:
-    from app.models.email_verification_token import EmailVerificationToken
+    from app.features.users.models.email_verification_token import (
+        EmailVerificationToken,
+    )
 
 
 class User(Base):

@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
-from app.domain.users.enums import UserRole
+from app.features.users.domain.enums import UserRole
 
 
 class RegisterRequest(BaseModel):

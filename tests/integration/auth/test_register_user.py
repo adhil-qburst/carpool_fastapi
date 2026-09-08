@@ -1,12 +1,12 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from app.api import auth
 from app.core.exceptions import EmailAlreadyRegisteredError, EmailDeliveryError
 from app.db.session import get_db
-from app.domain.users.enums import UserRole
+from app.features.auth.api import auth
+from app.features.users.domain.enums import UserRole
+from app.features.users.models.user import User
 from app.main import app
-from app.models.user import User
 
 
 @pytest.fixture

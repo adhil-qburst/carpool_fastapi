@@ -3,8 +3,8 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.domain.users.enums import UserRole, UserStatus
-from app.models.user import User
+from app.features.users.domain.enums import UserRole, UserStatus
+from app.features.users.models.user import User
 
 
 def get_by_email(session: Session, email: str) -> User | None:

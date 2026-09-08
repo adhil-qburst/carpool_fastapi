@@ -1,8 +1,8 @@
-"""create email verification token table
+"""Email verification table
 
-Revision ID: d1f06751a289
-Revises: 1487bd068229
-Create Date: 2026-09-07 15:05:18.616061
+Revision ID: 0c55d737e91a
+Revises: 4d03402f54f9
+Create Date: 2026-09-08 13:00:38.493250
 
 """
 
@@ -13,8 +13,8 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "d1f06751a289"
-down_revision: Union[str, Sequence[str], None] = "1487bd068229"
+revision: str = "0c55d737e91a"
+down_revision: Union[str, Sequence[str], None] = "4d03402f54f9"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

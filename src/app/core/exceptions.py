@@ -1,4 +1,4 @@
-from app.models.user import User
+from app.features.users.models.user import User
 
 
 class AppError(Exception):

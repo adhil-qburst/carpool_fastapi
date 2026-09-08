@@ -1,8 +1,8 @@
-"""create users table
+"""Add the user table
 
-Revision ID: 79de46887388
-Revises: 525e5ce67f2f
-Create Date: 2026-09-07 11:04:44.216733
+Revision ID: 4d03402f54f9
+Revises:
+Create Date: 2026-09-08 12:57:45.167255
 
 """
 
@@ -14,8 +14,8 @@ from sqlalchemy.dialects import postgresql
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "79de46887388"
-down_revision: Union[str, Sequence[str], None] = "525e5ce67f2f"
+revision: str = "4d03402f54f9"
+down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -33,6 +33,15 @@ def upgrade() -> None:
             "roles",
             postgresql.ARRAY(sa.Enum("driver", "rider", name="user_role")),
             nullable=False,
+        ),
+        sa.Column(
+            "status",
+            sa.Enum("pending", "active", "disabled", name="user_status"),
+            server_default="pending",
+            nullable=False,
+        ),
+        sa.Column(
+            "is_email_verified", sa.Boolean(), server_default="false", nullable=False
         ),
         sa.Column(
             "created_at",

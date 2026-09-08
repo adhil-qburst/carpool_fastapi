@@ -1,142 +1,63 @@
-project_name/
-│
-├── specs/
-│   └── openapi.yaml                 # API contract / source specification
-│
-├── alembic/
+# Carpool Server
+
+```text
+carpool_server/
+├── alembic/                         # Database migration scripts
 │   ├── env.py
 │   ├── script.py.mako
 │   └── versions/
-│       ├── 001_create_users.py
-│       ├── 002_create_locations.py
-│       └── ...
-│
+│       ├── 0c55d737e91a_email_verification_table.py
+│       └── 4d03402f54f9_add_the_user_table.py
+├── docs/
+│   └── carpool-project-plan.md
 ├── src/
 │   └── app/
 │       ├── __init__.py
-│       ├── main.py
-│       │
-│       ├── core/                    # Application-wide infrastructure
+│       ├── main.py                  # FastAPI application entry point
+│       ├── api/                     # HTTP routes and router registration
 │       │   ├── __init__.py
-│       │   ├── config.py            # Environment / settings
-│       │   ├── security.py          # JWT, password hashing
-│       │   └── exceptions.py
-│       │
-│       ├── db/                      # Database infrastructure
+│       │   └── router.py
+│       ├── core/                    # Application-wide configuration and utilities
 │       │   ├── __init__.py
-│       │   ├── base.py              # SQLAlchemy Base
-│       │   └── session.py            # DB session
-│       │
-│       ├── domain/                  # Business/domain layer
+│       │   ├── config.py
+│       │   ├── email.py
+│       │   ├── exceptions.py
+│       │   └── security.py
+│       ├── db/                      # Database setup and SQLAlchemy base
 │       │   ├── __init__.py
-│       │   │
-│       │   ├── common/
-│       │   │   ├── __init__.py
-│       │   │   └── enums.py          # Shared enums
-│       │   │
-│       │   ├── users/
-│       │   │   ├── __init__.py
-│       │   │   ├── enums.py          # UserRole
-│       │   │   ├── entities.py       # User domain entity
-│       │   │   └── rules.py          # User business rules
-│       │   │
-│       │   ├── locations/
-│       │   │   ├── entities.py
-│       │   │   └── rules.py
-│       │   │
-│       │   ├── routes/
-│       │   │   ├── entities.py
-│       │   │   └── rules.py
-│       │   │
-│       │   ├── trips/
-│       │   │   ├── entities.py
-│       │   │   └── rules.py
-│       │   │
-│       │   ├── bookings/
-│       │   │   ├── entities.py
-│       │   │   └── rules.py
-│       │   │
-│       │   ├── vehicles/
-│       │   │   ├── entities.py
-│       │   │   └── rules.py
-│       │   │
-│       │   └── reviews/
-│       │       ├── entities.py
-│       │       └── rules.py
-│       │
-│       ├── models/                  # SQLAlchemy persistence models
-│       │   ├── __init__.py
-│       │   ├── user.py
-│       │   ├── location.py
-│       │   ├── route.py
-│       │   ├── route_stop.py
-│       │   ├── trip.py
-│       │   ├── booking.py
-│       │   ├── vehicle.py
-│       │   └── review.py
-│       │
-│       ├── schemas/                 # Pydantic API contracts
-│       │   ├── __init__.py
-│       │   ├── auth/
-│       │   │   ├── register.py
-│       │   │   ├── login.py
-│       │   │   └── token.py
-│       │   ├── users/
-│       │   │   ├── create.py
-│       │   │   ├── update.py
-│       │   │   └── response.py
-│       │   ├── locations/
-│       │   ├── routes/
-│       │   ├── trips/
-│       │   ├── bookings/
-│       │   ├── vehicles/
-│       │   └── reviews/
-│       │
-│       ├── api/                     # HTTP layer
-│       │   ├── __init__.py
-│       │   ├── router.py
-│       │   ├── auth.py
-│       │   ├── locations.py
-│       │   ├── routes.py
-│       │   ├── trips.py
-│       │   ├── bookings.py
-│       │   ├── vehicles.py
-│       │   └── reviews.py
-│       │
-│       ├── services/                # Application/use-case layer
-│       │   ├── auth/
-│       │   │   ├── register.py
-│       │   │   ├── login.py
-│       │   │   └── refresh.py
-│       │   ├── routes/
-│       │   ├── trips/
-│       │   ├── bookings/
-│       │   ├── vehicles/
-│       │   └── reviews/
-│       │
-│       └── repositories/            # Database access
-│           ├── users.py
-│           ├── locations.py
-│           ├── routes.py
-│           ├── trips.py
-│           ├── bookings.py
-│           ├── vehicles.py
-│           └── reviews.py
-│
+│       │   ├── base.py
+│       │   └── session.py
+│       └── features/                # Feature-oriented application modules
+│           ├── __init__.py
+│           ├── auth/
+│           │   ├── __init__.py
+│           │   ├── api/
+│           │   │   └── auth.py
+│           │   └── schemas/
+│           │       ├── register.py
+│           │       └── verify_email.py
+│           └── users/
+│               ├── __init__.py
+│               ├── domain/
+│               │   ├── enums.py
+│               │   └── rules.py
+│               ├── models/
+│               │   ├── email_verification_token.py
+│               │   └── user.py
+│               ├── repositories/
+│               │   ├── email_verification_tokens.py
+│               │   └── users.py
+│               └── services/
+│                   ├── register.py
+│                   └── verify_email.py
 ├── tests/
-│   ├── unit/
-│   │   ├── domain/
-│   │   └── services/
-│   │
-│   ├── integration/
-│   │   ├── repositories/
-│   │   └── db/
-│   │
-│   └── contract/
-│       └── openapi/
-│
-├── .env
-├── .env.example
-├── .gitignore
+│   ├── conftest.py
+│   └── integration/
+│       └── auth/
+│           └── test_register_user.py
+├── alembic.ini
+├── openapi.yaml                     # API contract
 ├── pyproject.toml
+├── uv.lock
 └── README.md
+```
