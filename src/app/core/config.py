@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     smtp_password: str
     smtp_from: str
     smtp_use_tls: bool
+    rabbitmq_url: str
 
     email_verification_base_url: str
     email_verification_expire_hours: int

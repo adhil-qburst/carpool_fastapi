@@ -1,12 +1,14 @@
+import logging
+
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
-from app.core.email import send_verification_email
 from app.core.security.verification_token import generate_verification_token, hash_token
 from app.features.users.repositories.email_verification_tokens import (
     get_email_verification_token_repo,
 )
 from app.features.users.repositories.users import get_user_repo
+from app.tasks.email_tasks import send_verification_email_task
 
 
 def send_email_token(session: Session, settings: Settings, user_id: str, email: str):
@@ -22,4 +24,5 @@ def send_email_token(session: Session, settings: Settings, user_id: str, email: 
             settings.email_verification_expire_hours
         ),
     )
-    send_verification_email(email, raw_token, settings=settings)
+    print("Send Email Task")
+    send_verification_email_task.send(email, raw_token)

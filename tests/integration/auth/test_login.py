@@ -9,13 +9,17 @@ from app.features.auth.services import send_email_token
 def verification_email(monkeypatch):
     captured = {}
 
-    def fake_send_verification_email(to_email, token, *, settings=None):
+    def fake_send_verification_email_task(to_email, token):
         captured.update(email=to_email, token=token)
 
     monkeypatch.setattr(
         send_email_token,
-        "send_verification_email",
-        fake_send_verification_email,
+        "send_verification_email_task",
+        type(
+            "VerificationEmailTask",
+            (),
+            {"send": staticmethod(fake_send_verification_email_task)},
+        ),
     )
     return captured
 
