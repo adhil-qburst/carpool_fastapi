@@ -1,0 +1,692 @@
+openapi: 3.0.3
+info:
+  title: CarPool API
+  version: 0.1.0
+  description: API contract for the CarPool route-based ride-sharing platform.
+servers:
+  - url: http://localhost:8000
+
+tags:
+  - name: Auth
+  - name: Locations
+  - name: Routes
+  - name: Trips
+  - name: Search
+  - name: Bookings
+  - name: Vehicles
+  - name: Reviews
+  - name: Health
+
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a user
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered; verification email sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: Verification email could not be sent
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Authenticate a user
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authentication tokens
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh an access token
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Refreshed access token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /locations:
+    get:
+      tags: [Locations]
+      summary: Search locations for autocomplete
+      operationId: listLocations
+      parameters:
+        - name: search
+          in: query
+          schema: { type: string, maxLength: 100 }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200':
+          description: Matching locations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedLocations'
+
+  /routes:
+    post:
+      tags: [Routes]
+      summary: Create a route with ordered stops
+      operationId: createRoute
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RouteCreate'
+      responses:
+        '201':
+          description: Route created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Route' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /routes/{routeId}:
+    get:
+      tags: [Routes]
+      summary: Get a route
+      operationId: getRoute
+      parameters:
+        - { $ref: '#/components/parameters/RouteId' }
+      responses:
+        '200':
+          description: Route details
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Route' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /trips:
+    post:
+      tags: [Trips]
+      summary: Schedule a route instance
+      operationId: createTrip
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TripCreate' }
+      responses:
+        '201':
+          description: Trip scheduled
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Trip' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    get:
+      tags: [Trips]
+      summary: List trips
+      operationId: listTrips
+      parameters:
+        - name: route_id
+          in: query
+          schema: { $ref: '#/components/schemas/UUID' }
+        - name: date_from
+          in: query
+          schema: { type: string, format: date }
+        - name: date_to
+          in: query
+          schema: { type: string, format: date }
+        - name: min_seats
+          in: query
+          schema: { type: integer, minimum: 1 }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/TripStatus' }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200':
+          description: Matching trips
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaginatedTrips' }
+
+  /search:
+    post:
+      tags: [Search]
+      summary: Find matching trips
+      operationId: searchTrips
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SearchRequest' }
+      responses:
+        '200':
+          description: Trips matching the requested route and seat count
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SearchResponse' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /bookings:
+    post:
+      tags: [Bookings]
+      summary: Book seats on a trip
+      operationId: createBooking
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BookingCreate' }
+      responses:
+        '201':
+          description: Booking created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Booking' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /bookings/{bookingId}:
+    get:
+      tags: [Bookings]
+      summary: Get a booking
+      operationId: getBooking
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/BookingId' }
+      responses:
+        '200':
+          description: Booking details
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Booking' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /bookings/{bookingId}/cancel:
+    patch:
+      tags: [Bookings]
+      summary: Cancel a booking
+      operationId: cancelBooking
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/BookingId' }
+      responses:
+        '200':
+          description: Booking cancelled
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Booking' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /vehicles:
+    post:
+      tags: [Vehicles]
+      summary: Register a vehicle
+      operationId: createVehicle
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VehicleCreate' }
+      responses:
+        '201':
+          description: Vehicle created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Vehicle' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /vehicles/{vehicleId}/photo:
+    post:
+      tags: [Vehicles]
+      summary: Upload a vehicle photo
+      operationId: uploadVehiclePhoto
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/VehicleId' }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '200':
+          description: Updated vehicle
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Vehicle' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /reviews:
+    post:
+      tags: [Reviews]
+      summary: Review a completed booking
+      operationId: createReview
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReviewCreate' }
+      responses:
+        '201':
+          description: Review created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Review' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /health:
+    get:
+      tags: [Health]
+      summary: Check API liveness
+      operationId: healthCheck
+      responses:
+        '200':
+          description: API is running
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HealthResponse' }
+
+  /ready:
+    get:
+      tags: [Health]
+      summary: Check API readiness
+      operationId: readinessCheck
+      responses:
+        '200':
+          description: API is ready
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HealthResponse' }
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HealthResponse' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    RouteId:
+      name: routeId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/UUID' }
+    BookingId:
+      name: bookingId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/UUID' }
+    VehicleId:
+      name: vehicleId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/UUID' }
+
+  responses:
+    Unauthorized:
+      description: Authentication is required or invalid.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: The user lacks the required role.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: Request conflicts with the current resource state.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ValidationError:
+      description: Request validation failed.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+    UUID: { type: string, format: uuid }
+    Timestamp: { type: string, format: date-time }
+    Error:
+      type: object
+      required: [detail]
+      properties:
+        detail: { type: string }
+        code: { type: string }
+    UserRole:
+      type: string
+      enum: [driver, rider]
+    TripStatus:
+      type: string
+      enum: [scheduled, completed, cancelled]
+    BookingStatus:
+      type: string
+      enum: [pending, confirmed, cancelled, expired]
+
+    User:
+      type: object
+      required: [id, name, email, roles, created_at, updated_at]
+      properties:
+        id: { $ref: '#/components/schemas/UUID' }
+        name: { type: string, maxLength: 100 }
+        email: { type: string, format: email, maxLength: 255 }
+        roles:
+          type: array
+          items: { $ref: '#/components/schemas/UserRole' }
+        created_at: { $ref: '#/components/schemas/Timestamp' }
+        updated_at: { $ref: '#/components/schemas/Timestamp' }
+    RegisterRequest:
+      type: object
+      required: [name, email, password, roles]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        email: { type: string, format: email }
+        password: { type: string, format: password, minLength: 8 }
+        roles:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/UserRole' }
+    RegisterResponse:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string }
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, format: password }
+    RefreshTokenRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token: { type: string }
+    TokenResponse:
+      type: object
+      required: [access_token, token_type]
+      properties:
+        access_token: { type: string }
+        token_type: { type: string, enum: [bearer] }
+        expires_in: { type: integer, minimum: 1 }
+    AuthResponse:
+      allOf:
+        - $ref: '#/components/schemas/TokenResponse'
+        - type: object
+          required: [user]
+          properties:
+            user: { $ref: '#/components/schemas/User' }
+
+    Location:
+      type: object
+      required: [id, name, city, lat, lng, created_at, updated_at]
+      properties:
+        id: { $ref: '#/components/schemas/UUID' }
+        name: { type: string, maxLength: 255 }
+        city: { type: string, maxLength: 100 }
+        lat: { type: number, format: double, minimum: -90, maximum: 90 }
+        lng: { type: number, format: double, minimum: -180, maximum: 180 }
+        created_at: { $ref: '#/components/schemas/Timestamp' }
+        updated_at: { $ref: '#/components/schemas/Timestamp' }
+
+    Vehicle:
+      type: object
+      required: [id, driver_id, make, model, plate, seat_count, created_at, updated_at]
+      properties:
+        id: { $ref: '#/components/schemas/UUID' }
+        driver_id: { $ref: '#/components/schemas/UUID' }
+        make: { type: string, maxLength: 100 }
+        model: { type: string, maxLength: 100 }
+        plate: { type: string, maxLength: 20 }
+        seat_count: { type: integer, minimum: 1 }
+        photo_url: { type: string, format: uri, nullable: true }
+        created_at: { $ref: '#/components/schemas/Timestamp' }
+        updated_at: { $ref: '#/components/schemas/Timestamp' }
+    VehicleCreate:
+      type: object
+      required: [make, model, plate, seat_count]
+      properties:
+        make: { type: string, maxLength: 100 }
+        model: { type: string, maxLength: 100 }
+        plate: { type: string, maxLength: 20 }
+        seat_count: { type: integer, minimum: 1 }
+
+    RouteStop:
+      type: object
+      required: [id, route_id, location_id, sequence, eta_offset_minutes, created_at, updated_at]
+      properties:
+        id: { $ref: '#/components/schemas/UUID' }
+        route_id: { $ref: '#/components/schemas/UUID' }
+        location_id: { $ref: '#/components/schemas/UUID' }
+        sequence: { type: integer, minimum: 0 }
+        eta_offset_minutes: { type: integer, minimum: 0 }
+        location: { $ref: '#/components/schemas/Location' }
+        created_at: { $ref: '#/components/schemas/Timestamp' }
+        updated_at: { $ref: '#/components/schemas/Timestamp' }
+    RouteStopCreate:
+      type: object
+      required: [location_id, sequence, eta_offset_minutes]
+      properties:
+        location_id: { $ref: '#/components/schemas/UUID' }
+        sequence: { type: integer, minimum: 0 }
+        eta_offset_minutes: { type: integer, minimum: 0 }
+    Route:
+      type: object
+      required: [id, driver_id, vehicle_id, name, stops, created_at, updated_at]
+      properties:
+        id: { $ref: '#/components/schemas/UUID' }
+        driver_id: { $ref: '#/components/schemas/UUID' }
+        vehicle_id: { $ref: '#/components/schemas/UUID' }
+        name: { type: string, maxLength: 255 }
+        driver: { $ref: '#/components/schemas/User' }
+        vehicle: { $ref: '#/components/schemas/Vehicle' }
+        stops:
+          type: array
+          minItems: 2
+          items: { $ref: '#/components/schemas/RouteStop' }
+        created_at: { $ref: '#/components/schemas/Timestamp' }
+        updated_at: { $ref: '#/components/schemas/Timestamp' }
+    RouteCreate:
+      type: object
+      required: [vehicle_id, name, stops]
+      properties:
+        vehicle_id: { $ref: '#/components/schemas/UUID' }
+        name: { type: string, minLength: 1, maxLength: 255 }
+        stops:
+          type: array
+          minItems: 2
+          items: { $ref: '#/components/schemas/RouteStopCreate' }
+
+    Trip:
+      type: object
+      required: [id, route_id, departure_date, departure_time, available_seats, status, created_at, updated_at]
+      properties:
+        id: { $ref: '#/components/schemas/UUID' }
+        route_id: { $ref: '#/components/schemas/UUID' }
+        departure_date: { type: string, format: date }
+        departure_time: { type: string, format: time }
+        available_seats: { type: integer, minimum: 0 }
+        status: { $ref: '#/components/schemas/TripStatus' }
+        route: { $ref: '#/components/schemas/Route' }
+        created_at: { $ref: '#/components/schemas/Timestamp' }
+        updated_at: { $ref: '#/components/schemas/Timestamp' }
+    TripCreate:
+      type: object
+      required: [route_id, departure_date, departure_time, available_seats]
+      properties:
+        route_id: { $ref: '#/components/schemas/UUID' }
+        departure_date: { type: string, format: date }
+        departure_time: { type: string, format: time }
+        available_seats: { type: integer, minimum: 1 }
+    SearchRequest:
+      type: object
+      required: [source_location_id, destination_location_id, date, seats_needed]
+      properties:
+        source_location_id: { $ref: '#/components/schemas/UUID' }
+        destination_location_id: { $ref: '#/components/schemas/UUID' }
+        date: { type: string, format: date }
+        seats_needed: { type: integer, minimum: 1 }
+    SearchResult:
+      allOf:
+        - $ref: '#/components/schemas/Trip'
+        - type: object
+          properties:
+            pickup_stop: { $ref: '#/components/schemas/RouteStop' }
+            dropoff_stop: { $ref: '#/components/schemas/RouteStop' }
+            eta_minutes: { type: integer, minimum: 0 }
+    SearchResponse:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/SearchResult' }
+        total: { type: integer, minimum: 0 }
+
+    Booking:
+      type: object
+      required: [id, trip_id, rider_id, pickup_stop_id, dropoff_stop_id, seats_booked, status, created_at, updated_at]
+      properties:
+        id: { $ref: '#/components/schemas/UUID' }
+        trip_id: { $ref: '#/components/schemas/UUID' }
+        rider_id: { $ref: '#/components/schemas/UUID' }
+        pickup_stop_id: { $ref: '#/components/schemas/UUID' }
+        dropoff_stop_id: { $ref: '#/components/schemas/UUID' }
+        seats_booked: { type: integer, minimum: 1 }
+        status: { $ref: '#/components/schemas/BookingStatus' }
+        trip: { $ref: '#/components/schemas/Trip' }
+        rider: { $ref: '#/components/schemas/User' }
+        pickup_stop: { $ref: '#/components/schemas/RouteStop' }
+        dropoff_stop: { $ref: '#/components/schemas/RouteStop' }
+        created_at: { $ref: '#/components/schemas/Timestamp' }
+        updated_at: { $ref: '#/components/schemas/Timestamp' }
+    BookingCreate:
+      type: object
+      required: [trip_id, pickup_stop_id, dropoff_stop_id, seats_booked]
+      properties:
+        trip_id: { $ref: '#/components/schemas/UUID' }
+        pickup_stop_id: { $ref: '#/components/schemas/UUID' }
+        dropoff_stop_id: { $ref: '#/components/schemas/UUID' }
+        seats_booked: { type: integer, minimum: 1 }
+
+    Review:
+      type: object
+      required: [id, booking_id, rating, created_at, updated_at]
+      properties:
+        id: { $ref: '#/components/schemas/UUID' }
+        booking_id: { $ref: '#/components/schemas/UUID' }
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string, maxLength: 2000, nullable: true }
+        created_at: { $ref: '#/components/schemas/Timestamp' }
+        updated_at: { $ref: '#/components/schemas/Timestamp' }
+    ReviewCreate:
+      type: object
+      required: [booking_id, rating]
+      properties:
+        booking_id: { $ref: '#/components/schemas/UUID' }
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string, maxLength: 2000 }
+
+    PaginatedLocations:
+      type: object
+      required: [items, page, limit, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Location' }
+        page: { type: integer }
+        limit: { type: integer }
+        total: { type: integer }
+    PaginatedTrips:
+      type: object
+      required: [items, page, limit, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Trip' }
+        page: { type: integer }
+        limit: { type: integer }
+        total: { type: integer }
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [ok, ready, unavailable] }
+        database: { type: string, enum: [ok, unavailable] }

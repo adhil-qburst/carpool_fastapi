@@ -1,0 +1,95 @@
+from __future__ import annotations
+
+import uuid
+from datetime import datetime
+from typing import TYPE_CHECKING
+
+from sqlalchemy import Boolean, DateTime
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import String, func
+from sqlalchemy.dialects.postgresql import ARRAY, UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.db.base import Base
+from app.features.users.domain.enums import UserRole, UserStatus
+
+if TYPE_CHECKING:
+    from app.features.users.models.email_verification_token import (
+        EmailVerificationToken,
+    )
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+
+    name: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+    )
+
+    email: Mapped[str] = mapped_column(
+        String(255),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
+
+    password_hash: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+    )
+
+    roles: Mapped[list[UserRole]] = mapped_column(
+        ARRAY(
+            SQLEnum(
+                UserRole,
+                name="user_role",
+                values_callable=lambda enum: [member.value for member in enum],
+            )
+        ),
+        nullable=False,
+        default=list,
+    )
+
+    status: Mapped[UserStatus] = mapped_column(
+        SQLEnum(
+            UserStatus,
+            name="user_status",
+            values_callable=lambda enum: [member.value for member in enum],
+        ),
+        nullable=False,
+        default=UserStatus.PENDING,
+        server_default=UserStatus.PENDING.value,
+    )
+
+    last_login: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    is_email_verified: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    email_verification_tokens: Mapped[list["EmailVerificationToken"]] = relationship(
+        back_populates="user",
+    )
