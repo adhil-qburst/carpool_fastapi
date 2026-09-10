@@ -282,8 +282,76 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Vehicle' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    get:
+      tags: [Vehicles]
+      summary: List authenticated driver's vehicles
+      operationId: listVehicles
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: List of vehicles belonging to the driver
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Vehicle' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /vehicles/{vehicleId}:
+    get:
+      tags: [Vehicles]
+      summary: Get vehicle details
+      operationId: getVehicle
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/VehicleId' }
+      responses:
+        '200':
+          description: Vehicle details
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Vehicle' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Vehicles]
+      summary: Update vehicle details
+      operationId: updateVehicle
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/VehicleId' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VehicleUpdate' }
+      responses:
+        '200':
+          description: Vehicle updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Vehicle' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Vehicles]
+      summary: Delete a vehicle
+      operationId: deleteVehicle
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/VehicleId' }
+      responses:
+        '204':
+          description: Vehicle deleted
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
 
   /vehicles/{vehicleId}/photo:
     post:
@@ -508,25 +576,31 @@ components:
 
     Vehicle:
       type: object
-      required: [id, driver_id, make, model, plate, seat_count, created_at, updated_at]
+      required: [id, driver_id, make, model, registration_number, total_seats, created_at, updated_at]
       properties:
         id: { $ref: '#/components/schemas/UUID' }
         driver_id: { $ref: '#/components/schemas/UUID' }
-        make: { type: string, maxLength: 100 }
-        model: { type: string, maxLength: 100 }
-        plate: { type: string, maxLength: 20 }
-        seat_count: { type: integer, minimum: 1 }
-        photo_url: { type: string, format: uri, nullable: true }
+        make: { type: string, minLength: 1, maxLength: 100 }
+        model: { type: string, minLength: 1, maxLength: 100 }
+        registration_number: { type: string, minLength: 1, maxLength: 50 }
+        total_seats: { type: integer, minimum: 1, maximum: 50 }
         created_at: { $ref: '#/components/schemas/Timestamp' }
         updated_at: { $ref: '#/components/schemas/Timestamp' }
     VehicleCreate:
       type: object
-      required: [make, model, plate, seat_count]
+      required: [make, model, registration_number, total_seats]
       properties:
-        make: { type: string, maxLength: 100 }
-        model: { type: string, maxLength: 100 }
-        plate: { type: string, maxLength: 20 }
-        seat_count: { type: integer, minimum: 1 }
+        make: { type: string, minLength: 1, maxLength: 100 }
+        model: { type: string, minLength: 1, maxLength: 100 }
+        registration_number: { type: string, minLength: 1, maxLength: 50 }
+        total_seats: { type: integer, minimum: 1, maximum: 50 }
+    VehicleUpdate:
+      type: object
+      properties:
+        make: { type: string, minLength: 1, maxLength: 100 }
+        model: { type: string, minLength: 1, maxLength: 100 }
+        registration_number: { type: string, minLength: 1, maxLength: 50 }
+        total_seats: { type: integer, minimum: 1, maximum: 50 }
 
     RouteStop:
       type: object
