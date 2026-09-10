@@ -9,6 +9,7 @@ from app.db.base import Base
 from app.features.location.models.location import Location
 from app.features.users.models.email_verification_token import EmailVerificationToken
 from app.features.users.models.user import User
+from app.features.vehicles.models.vehicle import Vehicle
 
 load_dotenv()
 

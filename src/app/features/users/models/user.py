@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from app.features.users.models.email_verification_token import (
         EmailVerificationToken,
     )
+    from app.features.vehicles.models.vehicle import Vehicle
 
 
 class User(Base):
@@ -92,4 +93,8 @@ class User(Base):
 
     email_verification_tokens: Mapped[list["EmailVerificationToken"]] = relationship(
         back_populates="user",
+    )
+
+    vehicles: Mapped[list["Vehicle"]] = relationship(
+        back_populates="driver",
     )
