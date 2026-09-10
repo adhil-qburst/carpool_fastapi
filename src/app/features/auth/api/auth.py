@@ -12,13 +12,19 @@ from app.features.auth.exceptions import (
     EmailNotFoundError,
     InvalidCredentialError,
     InvalidEmailVerificationTokenError,
+    InvalidRefreshTokenError,
     RegisteredUserError,
     UnVerifiedUserError,
     UserDisabledError,
 )
 from app.features.auth.schemas.login import LoginRequest, LoginResponse
+from app.features.auth.schemas.refresh_token import (
+    RefreshTokenRequest,
+    RefreshTokenResponse,
+)
 from app.features.auth.schemas.register import RegisterRequest, RegisterResponse
 from app.features.auth.services.login import login_with_email_password
+from app.features.auth.services.refresh_token import refresh_access_token
 from app.features.auth.services.register import register_user
 from app.features.auth.services.verify_email import verify_email as verify_user_email
 
@@ -119,5 +125,41 @@ def login(
     except EmailDeliveryError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=exc.detail,
+        ) from exc
+
+
+@router.post(
+    "/refresh",
+    status_code=status.HTTP_200_OK,
+    response_model=RefreshTokenResponse,
+)
+def refresh(
+    payload: RefreshTokenRequest,
+    db: Session = Depends(get_db),
+) -> RefreshTokenResponse:
+    try:
+        tokens = refresh_access_token(
+            session=db,
+            refresh_token=payload.refresh_token,
+        )
+        return RefreshTokenResponse(
+            access_token=tokens.access_token,
+            token_type=tokens.token_type,
+            expires_in=tokens.expires_in or 900,
+        )
+    except InvalidRefreshTokenError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=exc.detail,
+        ) from exc
+    except UserDisabledError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=exc.detail,
+        ) from exc
+    except UnVerifiedUserError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail=exc.detail,
         ) from exc

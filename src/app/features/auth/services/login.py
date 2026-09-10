@@ -47,7 +47,7 @@ def login_with_email_password(
             secret_key=settings.jwt_secret,
             refresh_secret_key=settings.jwt_refresh_secret,
             algorithm=settings.jwt_algorithm,
-            access_token_expire_minutes=15,
+            access_token_expire_minutes=30,
             refresh_token_expire_days=7,
         )
 

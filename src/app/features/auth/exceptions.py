@@ -45,8 +45,16 @@ class EmailNotFoundError(AppError):
 
 
 class UserDisabledError(AppError):
-    def __init__(self):
-        super()._init__("User account is disabled.", "USER_DISABLED")
+    def __init__(self) -> None:
+        super().__init__("User account is disabled.", "USER_DISABLED")
+
+
+class InvalidRefreshTokenError(AppError):
+    def __init__(self) -> None:
+        super().__init__(
+            "Invalid or expired refresh token.",
+            "INVALID_REFRESH_TOKEN",
+        )
 
 
 class RegisteredUserError(AppError):
