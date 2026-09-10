@@ -152,7 +152,9 @@ def test_refresh_access_token_invalid_sub_raises_error(fake_settings):
     assert session.rolled_back is True
 
 
-def test_refresh_access_token_user_not_found_raises_error(monkeypatch, fake_settings, jwt_service):
+def test_refresh_access_token_user_not_found_raises_error(
+    monkeypatch, fake_settings, jwt_service
+):
     session = FakeSession()
     user_id = uuid4()
     refresh_token = jwt_service.create_refresh_token(user_id=user_id)
@@ -173,7 +175,9 @@ def test_refresh_access_token_user_not_found_raises_error(monkeypatch, fake_sett
     assert session.rolled_back is True
 
 
-def test_refresh_access_token_disabled_user_raises_error(monkeypatch, fake_settings, jwt_service):
+def test_refresh_access_token_disabled_user_raises_error(
+    monkeypatch, fake_settings, jwt_service
+):
     session = FakeSession()
     user_id = uuid4()
     refresh_token = jwt_service.create_refresh_token(user_id=user_id)
@@ -201,7 +205,9 @@ def test_refresh_access_token_disabled_user_raises_error(monkeypatch, fake_setti
     assert session.rolled_back is True
 
 
-def test_refresh_access_token_unverified_email_raises_error(monkeypatch, fake_settings, jwt_service):
+def test_refresh_access_token_unverified_email_raises_error(
+    monkeypatch, fake_settings, jwt_service
+):
     session = FakeSession()
     user_id = uuid4()
     refresh_token = jwt_service.create_refresh_token(user_id=user_id)

@@ -6,10 +6,7 @@ from app.core.config import Settings, get_settings
 from app.core.security.jwt import JWTService
 from app.features.auth.domain.entities.auth_token import RefreshedToken
 from app.features.auth.domain.rules import ensure_user_is_active
-from app.features.auth.exceptions import (
-    InvalidRefreshTokenError,
-    UnVerifiedUserError,
-)
+from app.features.auth.exceptions import InvalidRefreshTokenError, UnVerifiedUserError
 from app.features.users.models.user import User
 from app.features.users.repositories.users import get_user_repo
 

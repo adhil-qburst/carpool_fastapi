@@ -12,7 +12,9 @@ def normalize_registration_number(registration_number: str) -> str:
     return registration_number.strip().upper()
 
 
-def ensure_vehicle_exists(vehicle: Vehicle | None, vehicle_id: UUID | None = None) -> Vehicle:
+def ensure_vehicle_exists(
+    vehicle: Vehicle | None, vehicle_id: UUID | None = None
+) -> Vehicle:
     if vehicle is None:
         raise VehicleNotFoundError(vehicle_id=vehicle_id)
     return vehicle

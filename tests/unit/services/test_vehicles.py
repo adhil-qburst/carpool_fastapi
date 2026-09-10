@@ -4,6 +4,11 @@ from uuid import UUID, uuid4
 
 import pytest
 
+import app.features.vehicles.services.create_vehicle as create_vehicle_service
+import app.features.vehicles.services.delete_vehicle as delete_vehicle_service
+import app.features.vehicles.services.get_vehicle as get_vehicle_service
+import app.features.vehicles.services.list_vehicles as list_vehicles_service
+import app.features.vehicles.services.update_vehicle as update_vehicle_service
 from app.features.vehicles.exceptions import (
     VehicleForbiddenError,
     VehicleNotFoundError,
@@ -11,11 +16,6 @@ from app.features.vehicles.exceptions import (
 )
 from app.features.vehicles.schemas.create_vehicle import CreateVehicleRequest
 from app.features.vehicles.schemas.update_vehicle import UpdateVehicleRequest
-import app.features.vehicles.services.create_vehicle as create_vehicle_service
-import app.features.vehicles.services.delete_vehicle as delete_vehicle_service
-import app.features.vehicles.services.get_vehicle as get_vehicle_service
-import app.features.vehicles.services.list_vehicles as list_vehicles_service
-import app.features.vehicles.services.update_vehicle as update_vehicle_service
 
 
 class FakeSession:
@@ -425,7 +425,9 @@ def test_list_user_vehicles_returns_driver_vehicles(monkeypatch):
     ]
 
     fake_repo = SimpleNamespace(
-        list_by_driver_id=lambda s, driver_id: vehicles if driver_id == driver_id else [],
+        list_by_driver_id=lambda s, driver_id: (
+            vehicles if driver_id == driver_id else []
+        ),
     )
     monkeypatch.setattr(list_vehicles_service, "get_vehicle_repo", lambda: fake_repo)
 

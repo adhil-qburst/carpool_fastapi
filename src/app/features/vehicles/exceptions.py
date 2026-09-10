@@ -10,7 +10,9 @@ class VehicleNotFoundError(AppError):
 
 
 class VehicleForbiddenError(AppError):
-    def __init__(self, vehicle_id: UUID | None = None, user_id: UUID | None = None) -> None:
+    def __init__(
+        self, vehicle_id: UUID | None = None, user_id: UUID | None = None
+    ) -> None:
         self.vehicle_id = vehicle_id
         self.user_id = user_id
         super().__init__(

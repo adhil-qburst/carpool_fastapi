@@ -34,7 +34,9 @@ def update_vehicle(
         if payload.registration_number is not None:
             normalized_reg = normalize_registration_number(payload.registration_number)
             if normalized_reg != vehicle.registration_number:
-                existing_vehicle = repo.get_by_registration_number(session, normalized_reg)
+                existing_vehicle = repo.get_by_registration_number(
+                    session, normalized_reg
+                )
                 ensure_registration_number_available(
                     existing_vehicle,
                     current_vehicle_id=vehicle.id,
