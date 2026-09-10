@@ -1,7 +1,7 @@
 ---
 name: SQLAlchemy Model Generation
-description: "Use when creating or modifying SQLAlchemy models in src/app/models. Preserve the project's model conventions, never create migration scripts for model generation, and show commands for generating and applying migrations."
-applyTo: "src/app/models/**/*.py"
+description: "Use when creating or modifying SQLAlchemy models in src/app/features/*/models. Preserve the project's model conventions, never create migration scripts for model generation, and show commands for generating and applying migrations."
+applyTo: "src/app/features/**/models/**/*.py"
 ---
 
 # SQLAlchemy Model Generation
