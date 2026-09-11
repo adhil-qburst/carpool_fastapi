@@ -3,6 +3,7 @@ from uuid import UUID
 from app.features.routes.exceptions import (
     CannotSwapSameStopError,
     DuplicateStopLocationError,
+    DuplicateStopSequenceError,
     IdenticalSourceDestinationError,
     InvalidStopSequenceError,
     RouteForbiddenError,
@@ -75,6 +76,64 @@ def ensure_location_not_in_route(
 def ensure_valid_sequence(sequence: int, max_allowed: int) -> None:
     if sequence < 0 or sequence > max_allowed:
         raise InvalidStopSequenceError(sequence=sequence)
+
+
+def ensure_unique_route_locations(
+    source_id: UUID,
+    dest_id: UUID,
+    stop_location_ids: list[UUID] | None = None,
+) -> None:
+    """Validate that source, destination, and all intermediate stops are unique.
+
+    Ensures that source and destination are distinct, neither source nor
+    destination appears in the intermediate stops, and no stop location is duplicated.
+    """
+    ensure_distinct_source_and_destination(source_id=source_id, dest_id=dest_id)
+    if not stop_location_ids:
+        return
+
+    seen_locations: set[UUID] = {source_id, dest_id}
+    for location_id in stop_location_ids:
+        if location_id in seen_locations:
+            raise DuplicateStopLocationError(location_id=location_id)
+        seen_locations.add(location_id)
+
+
+def ensure_valid_intermediate_sequence(sequence: int, total_stops: int) -> None:
+    """Validate a single intermediate stop sequence.
+
+    Route starts at sequence 0 (source) and ends at sequence total_stops + 1 (dest).
+    Intermediate stop sequences must be strictly positive and precede destination
+    (1 <= sequence <= total_stops).
+    """
+    if sequence < 1 or sequence > total_stops:
+        raise InvalidStopSequenceError(sequence=sequence)
+
+
+def ensure_valid_intermediate_sequences(
+    sequences: list[int],
+    total_stops: int | None = None,
+) -> None:
+    """Validate intermediate stop sequences.
+
+    Checks that all sequences are strictly positive, valid within the route bounds
+    (1 <= sequence <= total_stops), and contain no duplicate sequences.
+    """
+    if not sequences:
+        return
+
+    max_allowed = total_stops if total_stops is not None else len(sequences)
+    seen: set[int] = set()
+
+    for seq in sequences:
+        if seq < 1 or seq > max_allowed:
+            raise InvalidStopSequenceError(sequence=seq)
+        if seq in seen:
+            raise DuplicateStopSequenceError(sequence=seq)
+        seen.add(seq)
+
+
+ensure_valid_intermediate_stop_sequences = ensure_valid_intermediate_sequences
 
 
 def ensure_stops_are_different(stop_id_1: UUID, stop_id_2: UUID) -> None:

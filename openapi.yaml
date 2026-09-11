@@ -122,8 +122,10 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Route' }
+        '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /routes/{routeId}:
@@ -463,6 +465,11 @@ components:
       schema: { $ref: '#/components/schemas/UUID' }
 
   responses:
+    BadRequest:
+      description: Bad request or validation failure.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
     Unauthorized:
       description: Authentication is required or invalid.
       content:
@@ -639,7 +646,7 @@ components:
         updated_at: { $ref: '#/components/schemas/Timestamp' }
     RouteCreate:
       type: object
-      required: [vehicle_id, name, stops]
+      required: [vehicle_id, name]
       properties:
         vehicle_id: { $ref: '#/components/schemas/UUID' }
         name: { type: string, minLength: 1, maxLength: 255 }

@@ -67,6 +67,17 @@ class InvalidStopSequenceError(AppError):
         )
 
 
+class DuplicateStopSequenceError(AppError):
+    def __init__(self, sequence: int | None = None) -> None:
+        self.sequence = sequence
+        detail = (
+            f"Duplicate stop sequence '{sequence}'."
+            if sequence is not None
+            else "Duplicate stop sequence."
+        )
+        super().__init__(detail, "DUPLICATE_STOP_SEQUENCE")
+
+
 class StopsDoNotBelongToSameRouteError(AppError):
     def __init__(
         self, stop_1_id: UUID | None = None, stop_2_id: UUID | None = None
