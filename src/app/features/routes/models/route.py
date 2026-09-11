@@ -4,7 +4,6 @@ from sqlalchemy import UUID, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
-from app.features.routes.models.route_stop import RouteStop
 from app.features.users.models.user import User
 
 

@@ -5,7 +5,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 from app.features.location.models.location import Location
-from app.features.routes.models.route import Route
 
 
 class RouteStop(Base):

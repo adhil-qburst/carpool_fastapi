@@ -7,6 +7,8 @@ from sqlalchemy import engine_from_config, pool
 from alembic import context
 from app.db.base import Base
 from app.features.location.models.location import Location
+from app.features.routes.models.route import Route
+from app.features.routes.models.route_stop import RouteStop
 from app.features.users.models.email_verification_token import EmailVerificationToken
 from app.features.users.models.user import User
 from app.features.vehicles.models.vehicle import Vehicle
