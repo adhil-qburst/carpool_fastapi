@@ -86,6 +86,23 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
 
   /locations:
+    post:
+      tags: [Locations]
+      summary: Create a new location
+      operationId: createLocation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LocationCreate' }
+      responses:
+        '201':
+          description: Location created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Location' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     get:
       tags: [Locations]
       summary: Search locations for autocomplete
@@ -94,6 +111,9 @@ paths:
         - name: search
           in: query
           schema: { type: string, maxLength: 100 }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/LocationStatus' }
         - { $ref: '#/components/parameters/Page' }
         - { $ref: '#/components/parameters/Limit' }
       responses:
@@ -103,6 +123,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaginatedLocations'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /routes:
     post:
@@ -514,6 +536,9 @@ components:
     BookingStatus:
       type: string
       enum: [pending, confirmed, cancelled, expired]
+    LocationStatus:
+      type: string
+      enum: [active, inactive]
 
     User:
       type: object
@@ -571,15 +596,25 @@ components:
 
     Location:
       type: object
-      required: [id, name, city, lat, lng, created_at, updated_at]
+      required: [id, name, city, status, created_at, updated_at]
       properties:
         id: { $ref: '#/components/schemas/UUID' }
         name: { type: string, maxLength: 255 }
-        city: { type: string, maxLength: 100 }
-        lat: { type: number, format: double, minimum: -90, maximum: 90 }
-        lng: { type: number, format: double, minimum: -180, maximum: 180 }
+        city: { type: string, maxLength: 255 }
+        lat: { type: number, format: double, minimum: -90, maximum: 90, nullable: true }
+        lng: { type: number, format: double, minimum: -180, maximum: 180, nullable: true }
+        status: { $ref: '#/components/schemas/LocationStatus' }
         created_at: { $ref: '#/components/schemas/Timestamp' }
         updated_at: { $ref: '#/components/schemas/Timestamp' }
+    LocationCreate:
+      type: object
+      required: [name, city]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 255 }
+        city: { type: string, minLength: 1, maxLength: 255 }
+        lat: { type: number, format: double, minimum: -90, maximum: 90, nullable: true }
+        lng: { type: number, format: double, minimum: -180, maximum: 180, nullable: true }
+        status: { $ref: '#/components/schemas/LocationStatus' }
 
     Vehicle:
       type: object
