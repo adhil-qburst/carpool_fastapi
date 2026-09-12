@@ -38,8 +38,11 @@ def ensure_route_name_available(
     existing_route: Route | None,
     name: str,
     driver_id: UUID | None = None,
+    current_route_id: UUID | None = None,
 ) -> None:
     if existing_route is not None:
+        if current_route_id is not None and existing_route.id == current_route_id:
+            return
         raise RouteNameAlreadyExistsError(name=name, driver_id=driver_id)
 
 

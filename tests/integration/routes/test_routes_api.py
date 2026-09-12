@@ -344,3 +344,214 @@ def test_swap_stops_api_stop_not_found(auth_client, monkeypatch):
     )
 
     assert response.status_code == 404
+
+
+# =============================================================================
+# PUT / PATCH /api/v1/routes/{route_id}
+# =============================================================================
+
+
+def test_update_route_api_success_put(auth_client, monkeypatch):
+    route_id = uuid4()
+    source_id = uuid4()
+    dest_id = uuid4()
+
+    stop1 = make_fake_stop(route_id=route_id, location_id=source_id, sequence=0)
+    stop2 = make_fake_stop(route_id=route_id, location_id=dest_id, sequence=1)
+    fake_route = make_fake_route(
+        route_id=route_id,
+        driver_id=TEST_USER_ID,
+        name="Updated Route",
+        stops=[stop1, stop2],
+    )
+
+    monkeypatch.setattr(
+        routes,
+        "update_route",
+        lambda session, route_id, driver_id, name, source_id, dest_id, stops: fake_route,
+    )
+
+    response = auth_client.put(
+        f"/api/v1/routes/{route_id}",
+        json={
+            "name": "Updated Route",
+            "source_id": str(source_id),
+            "dest_id": str(dest_id),
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == str(route_id)
+    assert data["name"] == "Updated Route"
+    assert data["driver_id"] == str(TEST_USER_ID)
+    assert len(data["route_stops"]) == 2
+
+
+def test_update_route_api_success_patch(auth_client, monkeypatch):
+    route_id = uuid4()
+    source_id = uuid4()
+    dest_id = uuid4()
+
+    fake_route = make_fake_route(
+        route_id=route_id,
+        driver_id=TEST_USER_ID,
+        name="Patched Route",
+    )
+
+    monkeypatch.setattr(
+        routes,
+        "update_route",
+        lambda session, route_id, driver_id, name, source_id, dest_id, stops: fake_route,
+    )
+
+    response = auth_client.patch(
+        f"/api/v1/routes/{route_id}",
+        json={
+            "name": "Patched Route",
+            "source_id": str(source_id),
+            "dest_id": str(dest_id),
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == str(route_id)
+    assert data["name"] == "Patched Route"
+
+
+def test_update_route_api_not_found(auth_client, monkeypatch):
+    route_id = uuid4()
+
+    def fake_update(session, route_id, driver_id, name, source_id, dest_id, stops):
+        raise RouteNotFoundError(route_id=route_id)
+
+    monkeypatch.setattr(routes, "update_route", fake_update)
+
+    response = auth_client.put(
+        f"/api/v1/routes/{route_id}",
+        json={
+            "name": "Route",
+            "source_id": str(uuid4()),
+            "dest_id": str(uuid4()),
+        },
+    )
+
+    assert response.status_code == 404
+
+
+def test_update_route_api_forbidden(auth_client, monkeypatch):
+    route_id = uuid4()
+
+    def fake_update(session, route_id, driver_id, name, source_id, dest_id, stops):
+        raise RouteForbiddenError(route_id=route_id)
+
+    monkeypatch.setattr(routes, "update_route", fake_update)
+
+    response = auth_client.put(
+        f"/api/v1/routes/{route_id}",
+        json={
+            "name": "Route",
+            "source_id": str(uuid4()),
+            "dest_id": str(uuid4()),
+        },
+    )
+
+    assert response.status_code == 403
+
+
+def test_update_route_api_conflict_name(auth_client, monkeypatch):
+    route_id = uuid4()
+
+    def fake_update(session, route_id, driver_id, name, source_id, dest_id, stops):
+        raise RouteNameAlreadyExistsError(name=name, driver_id=driver_id)
+
+    monkeypatch.setattr(routes, "update_route", fake_update)
+
+    response = auth_client.put(
+        f"/api/v1/routes/{route_id}",
+        json={
+            "name": "Existing",
+            "source_id": str(uuid4()),
+            "dest_id": str(uuid4()),
+        },
+    )
+
+    assert response.status_code == 409
+
+
+def test_update_route_api_identical_source_dest(auth_client, monkeypatch):
+    route_id = uuid4()
+    loc_id = uuid4()
+
+    def fake_update(session, route_id, driver_id, name, source_id, dest_id, stops):
+        raise IdenticalSourceDestinationError(location_id=source_id)
+
+    monkeypatch.setattr(routes, "update_route", fake_update)
+
+    response = auth_client.put(
+        f"/api/v1/routes/{route_id}",
+        json={
+            "name": "Daily Route",
+            "source_id": str(loc_id),
+            "dest_id": str(loc_id),
+        },
+    )
+
+    assert response.status_code == 400
+
+
+def test_update_route_api_duplicate_location(auth_client, monkeypatch):
+    route_id = uuid4()
+
+    def fake_update(session, route_id, driver_id, name, source_id, dest_id, stops):
+        raise DuplicateStopLocationError(location_id=source_id)
+
+    monkeypatch.setattr(routes, "update_route", fake_update)
+
+    response = auth_client.put(
+        f"/api/v1/routes/{route_id}",
+        json={
+            "name": "Route",
+            "source_id": str(uuid4()),
+            "dest_id": str(uuid4()),
+        },
+    )
+
+    assert response.status_code == 409
+
+
+def test_update_route_api_invalid_sequence(auth_client, monkeypatch):
+    route_id = uuid4()
+
+    def fake_update(session, route_id, driver_id, name, source_id, dest_id, stops):
+        raise InvalidStopSequenceError(sequence=99)
+
+    monkeypatch.setattr(routes, "update_route", fake_update)
+
+    response = auth_client.put(
+        f"/api/v1/routes/{route_id}",
+        json={
+            "name": "Route",
+            "source_id": str(uuid4()),
+            "dest_id": str(uuid4()),
+        },
+    )
+
+    assert response.status_code == 400
+
+
+def test_update_route_api_unauthorized(client):
+    app.dependency_overrides[get_db] = lambda: object()
+
+    response = client.put(
+        f"/api/v1/routes/{uuid4()}",
+        json={
+            "name": "Daily Route",
+            "source_id": str(uuid4()),
+            "dest_id": str(uuid4()),
+        },
+    )
+
+    assert response.status_code == 401
+

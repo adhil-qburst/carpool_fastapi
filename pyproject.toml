@@ -117,3 +117,7 @@ prepend_sys_path = [
 # executable = "ruff"
 # options = "check --fix REVISION_SCRIPT_FILENAME"
 
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+addopts = "--import-mode=importlib"
+

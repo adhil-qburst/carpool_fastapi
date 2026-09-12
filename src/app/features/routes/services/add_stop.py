@@ -34,7 +34,7 @@ def add_stop(
         if driver_id is not None:
             ensure_route_owner(route, driver_id=driver_id)
 
-        existing_stops = route_stop_repo.list_by_route_id(session, route_id=route_id)
+        existing_stops = route_stop_repo.list_by_route_id(session, route_id)
         ensure_location_not_in_route(
             existing_stops,
             location_id=location_id,
