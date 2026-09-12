@@ -127,6 +127,23 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /routes:
+    get:
+      tags: [Routes]
+      summary: List routes for the logged in user
+      operationId: listRoutes
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200':
+          description: List of routes belonging to the authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRoutes'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
     post:
       tags: [Routes]
       summary: Create a route with ordered stops
@@ -797,6 +814,16 @@ components:
         items:
           type: array
           items: { $ref: '#/components/schemas/Trip' }
+        page: { type: integer }
+        limit: { type: integer }
+        total: { type: integer }
+    PaginatedRoutes:
+      type: object
+      required: [items, page, limit, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Route' }
         page: { type: integer }
         limit: { type: integer }
         total: { type: integer }

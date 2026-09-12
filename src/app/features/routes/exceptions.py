@@ -97,3 +97,13 @@ class CannotSwapSameStopError(AppError):
             "Cannot swap a stop with itself.",
             "CANNOT_SWAP_SAME_STOP",
         )
+
+
+class InvalidPaginationError(AppError):
+    def __init__(self, limit: int, offset: int) -> None:
+        self.limit = limit
+        self.offset = offset
+        super().__init__(
+            "Limit must be greater than 0 and offset must be non-negative.",
+            "INVALID_PAGINATION",
+        )

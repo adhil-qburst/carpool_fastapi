@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, aliased, joinedload, selectinload
 
 from app.features.routes.models.route import Route
@@ -70,17 +70,31 @@ class RouteRepo:
         self,
         session: Session,
         driver_id: UUID,
+        *,
+        limit: int | None = None,
+        offset: int = 0,
     ) -> list[Route]:
-        return list(
-            session.scalars(
-                select(Route)
-                .where(Route.driver_id == driver_id)
-                .options(
-                    selectinload(Route.route_stops).joinedload(RouteStop.location),
-                )
-                .order_by(Route.name.asc())
-            ).all()
+        stmt = (
+            select(Route)
+            .where(Route.driver_id == driver_id)
+            .options(
+                selectinload(Route.route_stops).joinedload(RouteStop.location),
+            )
+            .order_by(Route.name.asc())
         )
+        if limit is not None:
+            stmt = stmt.limit(limit)
+        if offset > 0:
+            stmt = stmt.offset(offset)
+        return list(session.scalars(stmt).all())
+
+    def count_by_driver_id(
+        self,
+        session: Session,
+        driver_id: UUID,
+    ) -> int:
+        stmt = select(func.count(Route.id)).where(Route.driver_id == driver_id)
+        return session.scalar(stmt) or 0
 
     def find_by_locations(
         self,

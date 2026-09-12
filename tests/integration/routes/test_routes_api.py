@@ -10,6 +10,7 @@ from app.features.routes.exceptions import (
     CannotSwapSameStopError,
     DuplicateStopLocationError,
     IdenticalSourceDestinationError,
+    InvalidPaginationError,
     InvalidStopSequenceError,
     RouteForbiddenError,
     RouteNameAlreadyExistsError,
@@ -552,6 +553,84 @@ def test_update_route_api_unauthorized(client):
             "dest_id": str(uuid4()),
         },
     )
+
+    assert response.status_code == 401
+
+
+# =============================================================================
+# GET /api/v1/routes
+# =============================================================================
+
+
+def test_list_routes_api_success(auth_client, monkeypatch):
+    route_1 = make_fake_route(name="Route A")
+    route_2 = make_fake_route(name="Route B")
+    fake_list = [route_1, route_2]
+
+    called_params: dict = {}
+
+    def fake_list_user_routes(session, driver_id, limit, offset):
+        called_params["driver_id"] = driver_id
+        called_params["limit"] = limit
+        called_params["offset"] = offset
+        return fake_list, 2
+
+    monkeypatch.setattr(routes, "list_user_routes", fake_list_user_routes)
+
+    response = auth_client.get("/api/v1/routes?page=2&limit=5")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["page"] == 2
+    assert data["limit"] == 5
+    assert data["total"] == 2
+    assert len(data["items"]) == 2
+    assert data["items"][0]["name"] == "Route A"
+    assert data["items"][1]["name"] == "Route B"
+    assert called_params["limit"] == 5
+    assert called_params["offset"] == 5
+
+
+def test_list_routes_api_empty(auth_client, monkeypatch):
+    monkeypatch.setattr(
+        routes,
+        "list_user_routes",
+        lambda session, driver_id, limit, offset: ([], 0),
+    )
+
+    response = auth_client.get("/api/v1/routes")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["items"] == []
+    assert data["total"] == 0
+    assert data["page"] == 1
+    assert data["limit"] == 20
+
+
+def test_list_routes_api_invalid_pagination_domain_error(auth_client, monkeypatch):
+    def fake_list(session, driver_id, limit, offset):
+        raise InvalidPaginationError(limit=limit, offset=offset)
+
+    monkeypatch.setattr(routes, "list_user_routes", fake_list)
+
+    response = auth_client.get("/api/v1/routes")
+
+    assert response.status_code == 400
+
+
+def test_list_routes_api_validation_error(auth_client):
+    response = auth_client.get("/api/v1/routes?page=0")
+    assert response.status_code == 422
+
+    response = auth_client.get("/api/v1/routes?limit=0")
+    assert response.status_code == 422
+
+
+def test_list_routes_api_unauthorized(client):
+    app.dependency_overrides[get_db] = lambda: object()
+
+    response = client.get("/api/v1/routes")
 
     assert response.status_code == 401
 

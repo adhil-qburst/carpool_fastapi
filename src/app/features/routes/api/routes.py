@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.security.dependencies import get_current_user_id
@@ -10,6 +10,7 @@ from app.features.routes.exceptions import (
     DuplicateStopLocationError,
     DuplicateStopSequenceError,
     IdenticalSourceDestinationError,
+    InvalidPaginationError,
     InvalidStopSequenceError,
     RouteForbiddenError,
     RouteNameAlreadyExistsError,
@@ -19,11 +20,16 @@ from app.features.routes.exceptions import (
 )
 from app.features.routes.schemas.add_stop import AddStopRequest
 from app.features.routes.schemas.create_route import CreateRouteRequest
-from app.features.routes.schemas.route_response import RouteResponse, RouteStopResponse
+from app.features.routes.schemas.route_response import (
+    PaginatedRoutesResponse,
+    RouteResponse,
+    RouteStopResponse,
+)
 from app.features.routes.schemas.swap_stop import SwapStopsRequest
 from app.features.routes.schemas.update_route import UpdateRouteRequest
 from app.features.routes.services.add_stop import add_stop
 from app.features.routes.services.create_route import create_route
+from app.features.routes.services.list_routes import list_user_routes
 from app.features.routes.services.swap_stop import swap_stop
 from app.features.routes.services.update_route import update_route
 
@@ -81,6 +87,38 @@ def create_new_route(
             detail=exc.detail,
         ) from exc
     except InvalidStopSequenceError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=exc.detail,
+        ) from exc
+
+
+@router.get(
+    "",
+    status_code=status.HTTP_200_OK,
+    response_model=PaginatedRoutesResponse,
+)
+def list_routes(
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user_id: UUID = Depends(get_current_user_id),
+) -> PaginatedRoutesResponse:
+    offset = (page - 1) * limit
+    try:
+        items, total = list_user_routes(
+            session=db,
+            driver_id=current_user_id,
+            limit=limit,
+            offset=offset,
+        )
+        return PaginatedRoutesResponse(
+            items=items,
+            page=page,
+            limit=limit,
+            total=total,
+        )
+    except InvalidPaginationError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=exc.detail,

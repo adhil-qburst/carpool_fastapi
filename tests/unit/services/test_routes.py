@@ -5,11 +5,13 @@ import pytest
 
 import app.features.routes.services.add_stop as add_stop_service
 import app.features.routes.services.create_route as create_route_service
+import app.features.routes.services.list_routes as list_routes_service
 import app.features.routes.services.swap_stop as swap_stop_service
 from app.features.routes.exceptions import (
     CannotSwapSameStopError,
     DuplicateStopLocationError,
     IdenticalSourceDestinationError,
+    InvalidPaginationError,
     InvalidStopSequenceError,
     RouteForbiddenError,
     RouteNameAlreadyExistsError,
@@ -347,3 +349,69 @@ def test_swap_stop_different_routes_raises_error(monkeypatch):
             stop_id_1=stop_id_1,
             stop_id_2=stop_id_2,
         )
+
+
+# =============================================================================
+# list_user_routes
+# =============================================================================
+
+
+def test_list_user_routes_returns_driver_routes_and_total(monkeypatch):
+    session = FakeSession()
+    driver_id = uuid4()
+
+    fake_routes = [
+        make_fake_route(driver_id=driver_id, name="Morning Commute"),
+        make_fake_route(driver_id=driver_id, name="Evening Commute"),
+    ]
+
+    called_with: dict = {}
+
+    def fake_list_by_driver_id(s, driver_id, limit=20, offset=0):
+        called_with["driver_id"] = driver_id
+        called_with["limit"] = limit
+        called_with["offset"] = offset
+        return fake_routes
+
+    fake_route_repo = SimpleNamespace(
+        list_by_driver_id=fake_list_by_driver_id,
+        count_by_driver_id=lambda s, driver_id: 2,
+    )
+    monkeypatch.setattr(list_routes_service, "get_route_repo", lambda: fake_route_repo)
+
+    items, total = list_routes_service.list_user_routes(
+        session, driver_id, limit=10, offset=5
+    )
+
+    assert items == fake_routes
+    assert total == 2
+    assert called_with["driver_id"] == driver_id
+    assert called_with["limit"] == 10
+    assert called_with["offset"] == 5
+
+
+def test_list_user_routes_returns_empty_list_when_no_routes(monkeypatch):
+    session = FakeSession()
+    driver_id = uuid4()
+
+    fake_route_repo = SimpleNamespace(
+        list_by_driver_id=lambda s, driver_id, limit=20, offset=0: [],
+        count_by_driver_id=lambda s, driver_id: 0,
+    )
+    monkeypatch.setattr(list_routes_service, "get_route_repo", lambda: fake_route_repo)
+
+    items, total = list_routes_service.list_user_routes(session, driver_id)
+
+    assert items == []
+    assert total == 0
+
+
+def test_list_user_routes_invalid_pagination_raises(monkeypatch):
+    session = FakeSession()
+    driver_id = uuid4()
+
+    with pytest.raises(InvalidPaginationError):
+        list_routes_service.list_user_routes(session, driver_id, limit=0)
+
+    with pytest.raises(InvalidPaginationError):
+        list_routes_service.list_user_routes(session, driver_id, offset=-1)

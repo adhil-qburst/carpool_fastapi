@@ -5,6 +5,7 @@ from app.features.routes.exceptions import (
     DuplicateStopLocationError,
     DuplicateStopSequenceError,
     IdenticalSourceDestinationError,
+    InvalidPaginationError,
     InvalidStopSequenceError,
     RouteForbiddenError,
     RouteNameAlreadyExistsError,
@@ -153,3 +154,8 @@ def ensure_stops_belong_to_same_route(
             stop_1_id=stop_1.id,
             stop_2_id=stop_2.id,
         )
+
+
+def ensure_valid_pagination(limit: int, offset: int) -> None:
+    if limit <= 0 or offset < 0:
+        raise InvalidPaginationError(limit=limit, offset=offset)
