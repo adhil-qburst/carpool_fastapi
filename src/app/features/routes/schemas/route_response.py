@@ -2,6 +2,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.features.location.schemas.location_response import LocationResponse
 from app.features.routes.domain.enums import RouteStatus
 
 
@@ -12,6 +13,7 @@ class RouteStopResponse(BaseModel):
     route_id: UUID
     location_id: UUID
     sequence: int
+    location: LocationResponse | None = None
 
 
 class RouteResponse(BaseModel):

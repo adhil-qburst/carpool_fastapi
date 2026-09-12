@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from uuid import UUID, uuid4
 
@@ -5,6 +6,7 @@ import pytest
 
 from app.core.security.dependencies import get_current_user_id
 from app.db.session import get_db
+from app.features.location.domain.enums import LocationStatus
 from app.features.routes.api import routes
 from app.features.routes.exceptions import (
     CannotSwapSameStopError,
@@ -50,12 +52,14 @@ def make_fake_stop(
     route_id: UUID | None = None,
     location_id: UUID | None = None,
     sequence: int = 0,
+    location: Any = None,
 ) -> SimpleNamespace:
     return SimpleNamespace(
         id=stop_id or uuid4(),
         route_id=route_id or uuid4(),
         location_id=location_id or uuid4(),
         sequence=sequence,
+        location=location,
     )
 
 
@@ -99,6 +103,84 @@ def test_create_route_api_success(auth_client, monkeypatch):
     assert data["name"] == "Daily Route"
     assert data["driver_id"] == str(TEST_USER_ID)
     assert len(data["route_stops"]) == 2
+    assert data["route_stops"][0]["location"] is None
+
+
+def test_create_route_api_with_location_detail(auth_client, monkeypatch):
+    route_id = uuid4()
+    source_id = uuid4()
+    dest_id = uuid4()
+    now = datetime.now(timezone.utc)
+
+    fake_location_1 = SimpleNamespace(
+        id=source_id,
+        name="Downtown Station",
+        city="Metro City",
+        lat=12.9716,
+        lng=77.5946,
+        status=LocationStatus.ACTIVE,
+        created_at=now,
+        updated_at=now,
+    )
+    fake_location_2 = SimpleNamespace(
+        id=dest_id,
+        name="Tech Park",
+        city="Metro City",
+        lat=12.9352,
+        lng=77.6245,
+        status=LocationStatus.ACTIVE,
+        created_at=now,
+        updated_at=now,
+    )
+
+    stop1 = make_fake_stop(
+        route_id=route_id,
+        location_id=source_id,
+        sequence=0,
+        location=fake_location_1,
+    )
+    stop2 = make_fake_stop(
+        route_id=route_id,
+        location_id=dest_id,
+        sequence=1,
+        location=fake_location_2,
+    )
+    fake_route = make_fake_route(
+        route_id=route_id,
+        driver_id=TEST_USER_ID,
+        name="Office Express",
+        stops=[stop1, stop2],
+    )
+
+    monkeypatch.setattr(
+        routes,
+        "create_route",
+        lambda session, driver_id, name, source_id, dest_id: fake_route,
+    )
+
+    response = auth_client.post(
+        "/api/v1/routes",
+        json={
+            "name": "Office Express",
+            "source_id": str(source_id),
+            "dest_id": str(dest_id),
+        },
+    )
+
+    assert response.status_code == 201
+    data = response.json()
+    assert len(data["route_stops"]) == 2
+    stop_data_0 = data["route_stops"][0]
+    assert stop_data_0["location"] is not None
+    assert stop_data_0["location"]["id"] == str(source_id)
+    assert stop_data_0["location"]["name"] == "Downtown Station"
+    assert stop_data_0["location"]["city"] == "Metro City"
+    assert stop_data_0["location"]["status"] == "active"
+
+    stop_data_1 = data["route_stops"][1]
+    assert stop_data_1["location"] is not None
+    assert stop_data_1["location"]["id"] == str(dest_id)
+    assert stop_data_1["location"]["name"] == "Tech Park"
 
 
 def test_create_route_api_identical_source_dest(auth_client, monkeypatch):
