@@ -2,6 +2,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.features.routes.domain.enums import RouteStatus
+
 
 class RouteStopResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -17,6 +19,7 @@ class RouteResponse(BaseModel):
 
     id: UUID
     name: str
+    status: RouteStatus = RouteStatus.ACTIVE
     driver_id: UUID
     route_stops: list[RouteStopResponse] = []
 

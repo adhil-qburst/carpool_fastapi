@@ -13,6 +13,7 @@ from app.features.routes.exceptions import (
     RouteStopNotFoundError,
     StopsDoNotBelongToSameRouteError,
 )
+from app.features.routes.domain.enums import RouteStatus
 from app.features.routes.models.route import Route
 from app.features.routes.models.route_stop import RouteStop
 
@@ -28,6 +29,14 @@ def ensure_route_exists(
     if route is None:
         raise RouteNotFoundError(route_id=route_id)
     return route
+
+
+def ensure_route_active(
+    route: Route,
+    route_id: UUID | None = None,
+) -> None:
+    if route.status != RouteStatus.ACTIVE:
+        raise RouteNotFoundError(route_id=route_id or route.id)
 
 
 def ensure_route_owner(route: Route, driver_id: UUID) -> None:

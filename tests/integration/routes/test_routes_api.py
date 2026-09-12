@@ -634,3 +634,68 @@ def test_list_routes_api_unauthorized(client):
 
     assert response.status_code == 401
 
+
+# =============================================================================
+# DELETE /api/v1/routes/{route_id}
+# =============================================================================
+
+
+def test_delete_route_api_success(auth_client, monkeypatch):
+    route_id = uuid4()
+    called: dict = {}
+
+    def fake_delete_route(session, route_id, driver_id):
+        called["route_id"] = route_id
+        called["driver_id"] = driver_id
+
+    monkeypatch.setattr(routes, "delete_route", fake_delete_route)
+
+    response = auth_client.delete(f"/api/v1/routes/{route_id}")
+
+    assert response.status_code == 204
+    assert response.text == ""
+    assert called["route_id"] == route_id
+    assert called["driver_id"] == TEST_USER_ID
+
+
+def test_delete_route_api_not_found(auth_client, monkeypatch):
+    route_id = uuid4()
+
+    def fake_delete_route(session, route_id, driver_id):
+        raise RouteNotFoundError(route_id=route_id)
+
+    monkeypatch.setattr(routes, "delete_route", fake_delete_route)
+
+    response = auth_client.delete(f"/api/v1/routes/{route_id}")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Route not found."
+
+
+def test_delete_route_api_forbidden(auth_client, monkeypatch):
+    route_id = uuid4()
+
+    def fake_delete_route(session, route_id, driver_id):
+        raise RouteForbiddenError(route_id=route_id, user_id=driver_id)
+
+    monkeypatch.setattr(routes, "delete_route", fake_delete_route)
+
+    response = auth_client.delete(f"/api/v1/routes/{route_id}")
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "You do not have permission to access or modify this route."
+
+
+def test_delete_route_api_invalid_uuid(auth_client):
+    response = auth_client.delete("/api/v1/routes/not-a-uuid")
+    assert response.status_code == 422
+
+
+def test_delete_route_api_unauthorized(client):
+    app.dependency_overrides[get_db] = lambda: object()
+
+    response = client.delete(f"/api/v1/routes/{uuid4()}")
+
+    assert response.status_code == 401
+
+

@@ -3,6 +3,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
+from app.features.routes.domain.enums import RouteStatus
 from app.features.routes.domain.rules import ensure_valid_pagination
 from app.features.routes.models.route import Route
 from app.features.routes.repositories.route_repo import get_route_repo
@@ -14,6 +15,7 @@ def list_user_routes(
     *,
     limit: int = 20,
     offset: int = 0,
+    status: RouteStatus | None = RouteStatus.ACTIVE,
     settings: Settings | None = None,
 ) -> tuple[list[Route], int]:
     _ = settings or get_settings()
@@ -26,6 +28,7 @@ def list_user_routes(
         driver_id=driver_id,
         limit=limit,
         offset=offset,
+        status=status,
     )
-    total = repo.count_by_driver_id(session, driver_id=driver_id)
+    total = repo.count_by_driver_id(session, driver_id=driver_id, status=status)
     return items, total

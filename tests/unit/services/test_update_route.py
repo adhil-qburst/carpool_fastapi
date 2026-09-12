@@ -6,6 +6,7 @@ import importlib
 import pytest
 
 update_route_module = importlib.import_module("app.features.routes.services.update_route")
+from app.features.routes.domain.enums import RouteStatus
 from app.features.routes.exceptions import (
     DuplicateStopLocationError,
     DuplicateStopSequenceError,
@@ -38,12 +39,14 @@ def make_fake_route(
     route_id: UUID | None = None,
     driver_id: UUID | None = None,
     name: str = "Test Route",
+    status: RouteStatus = RouteStatus.ACTIVE,
     stops: list | None = None,
 ) -> SimpleNamespace:
     return SimpleNamespace(
         id=route_id or uuid4(),
         driver_id=driver_id or uuid4(),
         name=name,
+        status=status,
         route_stops=stops or [],
     )
 
@@ -79,10 +82,10 @@ def test_update_route_success(monkeypatch):
         return route
 
     fake_route_repo = SimpleNamespace(
-        get_by_id_for_update=lambda s, r_id: fake_route,
-        get_by_driver_and_name=lambda s, driver_id, name: None,
+        get_by_id_for_update=lambda s, r_id, **kwargs: fake_route,
+        get_by_driver_and_name=lambda s, driver_id, name, **kwargs: None,
         update=fake_update,
-        get_by_id_with_stops=lambda s, r_id: fake_route,
+        get_by_id_with_stops=lambda s, r_id, **kwargs: fake_route,
     )
 
     def fake_create_stop(s, route_id, location_id, sequence):
@@ -130,10 +133,10 @@ def test_update_route_keeps_same_name_no_conflict(monkeypatch):
     fake_route = make_fake_route(route_id=route_id, driver_id=driver_id, name="Daily Commute")
 
     fake_route_repo = SimpleNamespace(
-        get_by_id_for_update=lambda s, r_id: fake_route,
-        get_by_driver_and_name=lambda s, driver_id, name: fake_route,
+        get_by_id_for_update=lambda s, r_id, **kwargs: fake_route,
+        get_by_driver_and_name=lambda s, driver_id, name, **kwargs: fake_route,
         update=lambda s, route, name: route,
-        get_by_id_with_stops=lambda s, r_id: fake_route,
+        get_by_id_with_stops=lambda s, r_id, **kwargs: fake_route,
     )
 
     fake_route_stop_repo = SimpleNamespace(
@@ -160,7 +163,7 @@ def test_update_route_keeps_same_name_no_conflict(monkeypatch):
 def test_update_route_not_found(monkeypatch):
     session = FakeSession()
     fake_route_repo = SimpleNamespace(
-        get_by_id_for_update=lambda s, r_id: None,
+        get_by_id_for_update=lambda s, r_id, **kwargs: None,
     )
     monkeypatch.setattr(update_route_module, "get_route_repo", lambda: fake_route_repo)
 
@@ -183,7 +186,7 @@ def test_update_route_forbidden(monkeypatch):
 
     fake_route = make_fake_route(route_id=route_id, driver_id=owner_id, name="Route")
     fake_route_repo = SimpleNamespace(
-        get_by_id_for_update=lambda s, r_id: fake_route,
+        get_by_id_for_update=lambda s, r_id, **kwargs: fake_route,
     )
     monkeypatch.setattr(update_route_module, "get_route_repo", lambda: fake_route_repo)
 
@@ -208,8 +211,8 @@ def test_update_route_name_conflict(monkeypatch):
     other_route = make_fake_route(route_id=other_route_id, driver_id=driver_id, name="Existing Name")
 
     fake_route_repo = SimpleNamespace(
-        get_by_id_for_update=lambda s, r_id: current_route,
-        get_by_driver_and_name=lambda s, driver_id, name: other_route,
+        get_by_id_for_update=lambda s, r_id, **kwargs: current_route,
+        get_by_driver_and_name=lambda s, driver_id, name, **kwargs: other_route,
     )
     fake_route_stop_repo = SimpleNamespace()
 
@@ -235,7 +238,7 @@ def test_update_route_identical_source_destination(monkeypatch):
 
     fake_route = make_fake_route(route_id=route_id, driver_id=driver_id)
     fake_route_repo = SimpleNamespace(
-        get_by_id_for_update=lambda s, r_id: fake_route,
+        get_by_id_for_update=lambda s, r_id, **kwargs: fake_route,
     )
     monkeypatch.setattr(update_route_module, "get_route_repo", lambda: fake_route_repo)
 
@@ -259,7 +262,7 @@ def test_update_route_duplicate_location(monkeypatch):
 
     fake_route = make_fake_route(route_id=route_id, driver_id=driver_id)
     fake_route_repo = SimpleNamespace(
-        get_by_id_for_update=lambda s, r_id: fake_route,
+        get_by_id_for_update=lambda s, r_id, **kwargs: fake_route,
     )
     monkeypatch.setattr(update_route_module, "get_route_repo", lambda: fake_route_repo)
 
@@ -282,7 +285,7 @@ def test_update_route_invalid_sequence(monkeypatch):
 
     fake_route = make_fake_route(route_id=route_id, driver_id=driver_id)
     fake_route_repo = SimpleNamespace(
-        get_by_id_for_update=lambda s, r_id: fake_route,
+        get_by_id_for_update=lambda s, r_id, **kwargs: fake_route,
     )
     monkeypatch.setattr(update_route_module, "get_route_repo", lambda: fake_route_repo)
 
@@ -295,4 +298,36 @@ def test_update_route_invalid_sequence(monkeypatch):
             source_id=uuid4(),
             dest_id=uuid4(),
             stops=[CreateRouteStopRequest(stop_id=uuid4(), sequence=99)],
+        )
+
+
+def test_update_route_inactive_route_raises_not_found(monkeypatch):
+    session = FakeSession()
+    route_id = uuid4()
+    driver_id = uuid4()
+
+    inactive_route = make_fake_route(
+        route_id=route_id,
+        driver_id=driver_id,
+        status=RouteStatus.INACTIVE,
+    )
+
+    def fake_get_by_id_for_update(s, r_id, status=None):
+        if status is not None and inactive_route.status != status:
+            return None
+        return inactive_route
+
+    fake_route_repo = SimpleNamespace(
+        get_by_id_for_update=fake_get_by_id_for_update,
+    )
+    monkeypatch.setattr(update_route_module, "get_route_repo", lambda: fake_route_repo)
+
+    with pytest.raises(RouteNotFoundError):
+        update_route_module.update_route(
+            session,
+            route_id=route_id,
+            driver_id=driver_id,
+            name="Route",
+            source_id=uuid4(),
+            dest_id=uuid4(),
         )

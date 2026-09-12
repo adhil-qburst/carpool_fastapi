@@ -367,15 +367,16 @@ def test_list_user_routes_returns_driver_routes_and_total(monkeypatch):
 
     called_with: dict = {}
 
-    def fake_list_by_driver_id(s, driver_id, limit=20, offset=0):
+    def fake_list_by_driver_id(s, driver_id, limit=20, offset=0, status=None):
         called_with["driver_id"] = driver_id
         called_with["limit"] = limit
         called_with["offset"] = offset
+        called_with["status"] = status
         return fake_routes
 
     fake_route_repo = SimpleNamespace(
         list_by_driver_id=fake_list_by_driver_id,
-        count_by_driver_id=lambda s, driver_id: 2,
+        count_by_driver_id=lambda s, driver_id, **kwargs: 2,
     )
     monkeypatch.setattr(list_routes_service, "get_route_repo", lambda: fake_route_repo)
 
@@ -388,6 +389,7 @@ def test_list_user_routes_returns_driver_routes_and_total(monkeypatch):
     assert called_with["driver_id"] == driver_id
     assert called_with["limit"] == 10
     assert called_with["offset"] == 5
+    assert called_with["status"] == "active"
 
 
 def test_list_user_routes_returns_empty_list_when_no_routes(monkeypatch):
@@ -395,8 +397,8 @@ def test_list_user_routes_returns_empty_list_when_no_routes(monkeypatch):
     driver_id = uuid4()
 
     fake_route_repo = SimpleNamespace(
-        list_by_driver_id=lambda s, driver_id, limit=20, offset=0: [],
-        count_by_driver_id=lambda s, driver_id: 0,
+        list_by_driver_id=lambda s, driver_id, limit=20, offset=0, status=None: [],
+        count_by_driver_id=lambda s, driver_id, **kwargs: 0,
     )
     monkeypatch.setattr(list_routes_service, "get_route_repo", lambda: fake_route_repo)
 
