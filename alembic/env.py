@@ -12,6 +12,7 @@ from app.features.routes.models.route_stop import RouteStop
 from app.features.users.models.email_verification_token import EmailVerificationToken
 from app.features.users.models.user import User
 from app.features.vehicles.models.vehicle import Vehicle
+from app.features.trips.models.trip import Trip
 
 load_dotenv()
 
