@@ -4,15 +4,6 @@ from pathlib import Path
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 
-_obj = Path(
-    "/Users/adhil.k/Desktop/Tutorials/FastAPI/carpool_server/.git/objects/5c/c287bbed7250d889dda1888185e67ca7d4138a"
-)
-if _obj.exists():
-    _data = zlib.decompress(_obj.read_bytes()).split(b"\x00", 1)[1]
-    Path(
-        "/Users/adhil.k/Desktop/Tutorials/FastAPI/carpool_server/openapi.yaml"
-    ).write_bytes(_data)
-
 from app.api.router import api_router
 
 app = FastAPI(
