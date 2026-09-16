@@ -8,10 +8,12 @@ import app.features.trips.services.create_trip as create_trip_service
 import app.features.trips.services.delete_trip as delete_trip_service
 import app.features.trips.services.get_trip as get_trip_service
 import app.features.trips.services.list_trips as list_trips_service
+import app.features.trips.services.search_trips as search_trips_service
 import app.features.trips.services.update_trip as update_trip_service
 from app.features.routes.domain.enums import RouteStatus
 from app.features.trips.domain.enums import TripStatus
 from app.features.trips.exceptions import (
+    IdenticalSourceDestinationError,
     InvalidAvailableSeatsError,
     InvalidPaginationError,
     PastDepartureError,
@@ -599,4 +601,89 @@ def test_delete_trip_already_deleted_cannot_be_deleted(monkeypatch):
 
     with pytest.raises(TripCannotBeDeletedError):
         delete_trip_service.delete_trip(session, trip_id=trip_id, driver_id=driver_id)
+
+
+# =============================================================================
+# search_trips
+# =============================================================================
+
+
+def test_search_trips_success(monkeypatch):
+    session = FakeSession()
+    source_loc_id = uuid4()
+    dest_loc_id = uuid4()
+    future_date = date.today() + timedelta(days=2)
+
+    fake_trip = make_fake_trip(
+        departure_date=future_date,
+        available_seats=3,
+        status=TripStatus.SCHEDULED,
+    )
+    captured = {}
+
+    def fake_search(s, **kwargs):
+        captured["session"] = s
+        captured.update(kwargs)
+        return [fake_trip], 1
+
+    fake_repo = SimpleNamespace(search=fake_search)
+    monkeypatch.setattr(search_trips_service, "get_trip_repo", lambda: fake_repo)
+
+    items, total = search_trips_service.search_trips(
+        session,
+        source_location_id=source_loc_id,
+        destination_location_id=dest_loc_id,
+        departure_date=future_date,
+        seats_needed=2,
+        status=TripStatus.SCHEDULED,
+        limit=10,
+        offset=0,
+    )
+
+    assert total == 1
+    assert items == [fake_trip]
+    assert captured["source_location_id"] == source_loc_id
+    assert captured["destination_location_id"] == dest_loc_id
+    assert captured["departure_date"] == future_date
+    assert captured["seats_needed"] == 2
+    assert captured["status"] == TripStatus.SCHEDULED
+    assert captured["limit"] == 10
+    assert captured["offset"] == 0
+
+
+def test_search_trips_identical_source_destination_error():
+    session = FakeSession()
+    same_loc_id = uuid4()
+
+    with pytest.raises(IdenticalSourceDestinationError):
+        search_trips_service.search_trips(
+            session,
+            source_location_id=same_loc_id,
+            destination_location_id=same_loc_id,
+        )
+
+
+def test_search_trips_invalid_pagination():
+    session = FakeSession()
+    source_loc_id = uuid4()
+    dest_loc_id = uuid4()
+
+    with pytest.raises(InvalidPaginationError):
+        search_trips_service.search_trips(
+            session,
+            source_location_id=source_loc_id,
+            destination_location_id=dest_loc_id,
+            limit=0,
+            offset=0,
+        )
+
+    with pytest.raises(InvalidPaginationError):
+        search_trips_service.search_trips(
+            session,
+            source_location_id=source_loc_id,
+            destination_location_id=dest_loc_id,
+            limit=10,
+            offset=-1,
+        )
+
 

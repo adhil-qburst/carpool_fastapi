@@ -3,6 +3,7 @@ from uuid import UUID
 
 from app.features.trips.domain.enums import TripStatus
 from app.features.trips.exceptions import (
+    IdenticalSourceDestinationError,
     InvalidAvailableSeatsError,
     InvalidPaginationError,
     PastDepartureError,
@@ -118,3 +119,12 @@ def ensure_trip_can_be_deleted(current_status: TripStatus | str) -> None:
 def ensure_valid_pagination(limit: int, offset: int) -> None:
     if limit <= 0 or offset < 0:
         raise InvalidPaginationError(limit=limit, offset=offset)
+
+
+def ensure_distinct_source_and_destination(
+    source_location_id: UUID,
+    destination_location_id: UUID,
+) -> None:
+    if source_location_id == destination_location_id:
+        raise IdenticalSourceDestinationError(location_id=source_location_id)
+

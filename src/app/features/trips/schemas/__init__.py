@@ -1,4 +1,8 @@
 from app.features.trips.schemas.create_trip import CreateTripRequest
+from app.features.trips.schemas.search_trips import (
+    SearchTripsRequest,
+    SearchTripsResponse,
+)
 from app.features.trips.schemas.trip_response import (
     PaginatedTripsResponse,
     TripResponse,
@@ -10,4 +14,6 @@ __all__ = [
     "UpdateTripRequest",
     "TripResponse",
     "PaginatedTripsResponse",
+    "SearchTripsRequest",
+    "SearchTripsResponse",
 ]

@@ -106,3 +106,13 @@ class InvalidPaginationError(AppError):
             "Limit must be greater than 0 and offset must be non-negative.",
             "INVALID_PAGINATION",
         )
+
+
+class IdenticalSourceDestinationError(AppError):
+    def __init__(self, location_id: UUID | None = None) -> None:
+        self.location_id = location_id
+        super().__init__(
+            "Source and destination locations cannot be identical.",
+            "IDENTICAL_SOURCE_DESTINATION",
+        )
+

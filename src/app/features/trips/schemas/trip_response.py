@@ -3,6 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
+from app.features.routes.schemas.route_response import RouteResponse
 from app.features.trips.domain.enums import TripStatus
 
 
@@ -17,8 +18,10 @@ class TripResponse(BaseModel):
     departure_time: time
     available_seats: int
     status: TripStatus
+    route: RouteResponse | None = None
     created_at: datetime
     updated_at: datetime
+
 
 
 

@@ -347,3 +347,97 @@ def test_delete_trip_api_completed_cannot_delete(auth_client, monkeypatch):
     response = auth_client.delete(f"/api/v1/trips/{trip_id}")
     assert response.status_code == 400
     assert "cannot be deleted" in response.json()["detail"]
+
+
+# =============================================================================
+# GET /api/v1/trips/search
+# =============================================================================
+
+
+def test_search_trips_api_success(client, monkeypatch):
+    source_id = uuid4()
+    dest_id = uuid4()
+    trip_id = uuid4()
+    route_id = uuid4()
+    vehicle_id = uuid4()
+    future_date = date.today() + timedelta(days=2)
+
+    fake_trip = make_fake_trip(
+        trip_id=trip_id,
+        route_id=route_id,
+        vehicle_id=vehicle_id,
+        departure_date=future_date,
+        available_seats=3,
+        status=TripStatus.SCHEDULED,
+    )
+
+    def fake_search(*args, **kwargs):
+        return [fake_trip], 1
+
+    monkeypatch.setattr(trips, "search_trips", fake_search)
+
+    response = client.get(
+        "/api/v1/trips/search",
+        params={
+            "source_location_id": str(source_id),
+            "destination_location_id": str(dest_id),
+            "departure_date": future_date.isoformat(),
+            "seats_needed": 2,
+            "page": 1,
+            "limit": 10,
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 1
+    assert data["page"] == 1
+    assert data["limit"] == 10
+    assert len(data["items"]) == 1
+    assert data["items"][0]["id"] == str(trip_id)
+
+
+def test_search_trips_api_identical_source_destination(client, monkeypatch):
+    same_id = uuid4()
+    from app.features.trips.exceptions import IdenticalSourceDestinationError
+
+    def fake_search(*args, **kwargs):
+        raise IdenticalSourceDestinationError(same_id)
+
+    monkeypatch.setattr(trips, "search_trips", fake_search)
+
+    response = client.get(
+        "/api/v1/trips/search",
+        params={
+            "source_location_id": str(same_id),
+            "destination_location_id": str(same_id),
+        },
+    )
+
+    assert response.status_code == 400
+    assert "Source and destination" in response.json()["detail"]
+
+
+def test_search_trips_api_invalid_pagination(client, monkeypatch):
+    source_id = uuid4()
+    dest_id = uuid4()
+    from app.features.trips.exceptions import InvalidPaginationError
+
+    def fake_search(*args, **kwargs):
+        raise InvalidPaginationError(limit=0, offset=0)
+
+    monkeypatch.setattr(trips, "search_trips", fake_search)
+
+    response = client.get(
+        "/api/v1/trips/search",
+        params={
+            "source_location_id": str(source_id),
+            "destination_location_id": str(dest_id),
+            "page": 1,
+            "limit": 20,
+        },
+    )
+
+    assert response.status_code == 400
+    assert "Limit must be greater than 0" in response.json()["detail"]
+
