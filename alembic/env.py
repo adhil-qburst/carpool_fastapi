@@ -13,6 +13,7 @@ from app.features.users.models.email_verification_token import EmailVerification
 from app.features.users.models.user import User
 from app.features.vehicles.models.vehicle import Vehicle
 from app.features.trips.models.trip import Trip
+from app.features.bookings.models.booking import Booking
 
 load_dotenv()
 
