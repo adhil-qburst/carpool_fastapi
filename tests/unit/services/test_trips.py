@@ -687,3 +687,25 @@ def test_search_trips_invalid_pagination():
         )
 
 
+def test_trip_repo_search_ignores_seats_needed():
+    from unittest.mock import MagicMock
+    from app.features.trips.repositories.trips import TripRepo
+
+    session = MagicMock()
+    session.scalar.return_value = 0
+    session.scalars.return_value.all.return_value = []
+    repo = TripRepo()
+
+    repo.search(
+        session,
+        source_location_id=uuid4(),
+        destination_location_id=uuid4(),
+        seats_needed=5,
+    )
+
+    assert session.scalars.call_count == 1
+    query = session.scalars.call_args[0][0]
+    assert "available_seats" not in str(query.whereclause)
+
+
+

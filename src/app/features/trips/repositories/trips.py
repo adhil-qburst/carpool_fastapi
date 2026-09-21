@@ -142,8 +142,8 @@ class TripRepo:
 
         if departure_date is not None:
             base_query = base_query.where(Trip.departure_date == departure_date)
-        if seats_needed is not None:
-            base_query = base_query.where(Trip.available_seats >= seats_needed)
+        # seats_needed is ignored because users can book for empty seats (waitlist/pending bookings)
+        _ = seats_needed
         if status is not None:
             base_query = base_query.where(Trip.status == status)
 
