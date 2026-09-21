@@ -16,6 +16,7 @@ tags:
   - name: Vehicles
   - name: Reviews
   - name: Ride Preferences
+  - name: Notifications
   - name: Health
 
 paths:
@@ -658,6 +659,78 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/HealthResponse' }
 
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: List user notifications
+      operationId: listNotifications
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - in: query
+          name: is_read
+          schema: { type: boolean, nullable: true }
+        - in: query
+          name: status
+          schema: { type: string, enum: [unread, read, archived], nullable: true }
+        - in: query
+          name: type
+          schema: { type: string, enum: [booking_confirmation, booking_request, booking_cancelled, booking_rejected, trip_cancelled, trip_updated, system], nullable: true }
+      responses:
+        '200':
+          description: Paginated notifications
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNotificationsResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /notifications/unread-count:
+    get:
+      tags: [Notifications]
+      summary: Get unread notifications count
+      operationId: getUnreadNotificationsCount
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Unread notification count
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationUnreadCountResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /notifications/{notification_id}:
+    get:
+      tags: [Notifications]
+      summary: Get notification by ID
+      operationId: getNotificationById
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: notification_id
+          required: true
+          schema: { $ref: '#/components/schemas/UUID' }
+      responses:
+        '200':
+          description: Notification details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1100,4 +1173,39 @@ components:
         source: { $ref: '#/components/schemas/Location' }
         destination: { $ref: '#/components/schemas/Location' }
         rider: { $ref: '#/components/schemas/PassengerUserResponse' }
+
+    NotificationResponse:
+      type: object
+      required: [id, user_id, title, message, type, status, is_read, created_at, updated_at]
+      properties:
+        id: { $ref: '#/components/schemas/UUID' }
+        user_id: { $ref: '#/components/schemas/UUID' }
+        title: { type: string }
+        message: { type: string }
+        type: { type: string, enum: [booking_confirmation, booking_request, booking_cancelled, booking_rejected, trip_cancelled, trip_updated, system] }
+        status: { type: string, enum: [unread, read, archived] }
+        is_read: { type: boolean }
+        read_at: { $ref: '#/components/schemas/Timestamp', nullable: true }
+        data: { type: object, nullable: true }
+        created_at: { $ref: '#/components/schemas/Timestamp' }
+        updated_at: { $ref: '#/components/schemas/Timestamp' }
+
+    PaginatedNotificationsResponse:
+      type: object
+      required: [items, page, limit, total, unread_count]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/NotificationResponse' }
+        page: { type: integer }
+        limit: { type: integer }
+        total: { type: integer }
+        unread_count: { type: integer }
+
+    NotificationUnreadCountResponse:
+      type: object
+      required: [unread_count]
+      properties:
+        unread_count: { type: integer }
+
 

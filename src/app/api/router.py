@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from app.features.auth.api import auth
 from app.features.bookings.api import bookings
 from app.features.location.api import locations
+from app.features.notifications.api import notifications
 from app.features.ride_preferences.api import ride_preferences
 from app.features.routes.api import routes
 from app.features.trips.api import trips
@@ -20,5 +21,9 @@ api_router.include_router(locations.router, prefix="/locations", tags=["Location
 api_router.include_router(
     ride_preferences.router, prefix="/ride-preferences", tags=["Ride Preferences"]
 )
+api_router.include_router(
+    notifications.router, prefix="/notifications", tags=["Notifications"]
+)
+
 
 
