@@ -15,6 +15,7 @@ from app.features.vehicles.models.vehicle import Vehicle
 from app.features.trips.models.trip import Trip
 from app.features.bookings.models.booking import Booking
 from app.features.ride_preferences.models.ride_preference import RidePreference
+from app.features.notifications.models.notification import Notification
 
 load_dotenv()
 
