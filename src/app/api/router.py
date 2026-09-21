@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from app.features.auth.api import auth
 from app.features.bookings.api import bookings
 from app.features.location.api import locations
+from app.features.ride_preferences.api import ride_preferences
 from app.features.routes.api import routes
 from app.features.trips.api import trips
 from app.features.users.api import users
@@ -16,4 +17,8 @@ api_router.include_router(trips.router, prefix="/trips", tags=["Trips"])
 api_router.include_router(bookings.router, prefix="/bookings", tags=["Bookings"])
 api_router.include_router(users.router, prefix="/users", tags=["Auth"])
 api_router.include_router(locations.router, prefix="/locations", tags=["Locations"])
+api_router.include_router(
+    ride_preferences.router, prefix="/ride-preferences", tags=["Ride Preferences"]
+)
+
 

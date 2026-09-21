@@ -15,6 +15,7 @@ tags:
   - name: Bookings
   - name: Vehicles
   - name: Reviews
+  - name: Ride Preferences
   - name: Health
 
 paths:
@@ -505,6 +506,129 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /ride-preferences:
+    post:
+      tags: [Ride Preferences]
+      summary: Create a ride preference
+      operationId: createRidePreference
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateRidePreferenceRequest' }
+      responses:
+        '201':
+          description: Ride preference created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RidePreferenceResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    get:
+      tags: [Ride Preferences]
+      summary: List current user's ride preferences
+      operationId: listRidePreferences
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: active_only
+          in: query
+          required: false
+          schema: { type: boolean, default: false }
+      responses:
+        '200':
+          description: List of user's ride preferences
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RidePreferenceResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /ride-preferences/matches:
+    get:
+      tags: [Ride Preferences]
+      summary: List active ride preferences matching locations
+      operationId: listMatchingRidePreferences
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: source_location_id
+          in: query
+          required: true
+          schema: { $ref: '#/components/schemas/UUID' }
+        - name: destination_location_id
+          in: query
+          required: true
+          schema: { $ref: '#/components/schemas/UUID' }
+      responses:
+        '200':
+          description: Matching active ride preferences
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RidePreferenceResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /ride-preferences/{preference_id}:
+    get:
+      tags: [Ride Preferences]
+      summary: Get a ride preference by ID
+      operationId: getRidePreference
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/RidePreferenceId' }
+      responses:
+        '200':
+          description: Ride preference details
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RidePreferenceResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Ride Preferences]
+      summary: Update a ride preference
+      operationId: updateRidePreference
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/RidePreferenceId' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateRidePreferenceRequest' }
+      responses:
+        '200':
+          description: Updated ride preference
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RidePreferenceResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Ride Preferences]
+      summary: Delete a ride preference
+      operationId: deleteRidePreference
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/RidePreferenceId' }
+      responses:
+        '204':
+          description: Ride preference deleted
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /health:
     get:
       tags: [Health]
@@ -565,6 +689,12 @@ components:
       in: path
       required: true
       schema: { $ref: '#/components/schemas/UUID' }
+    RidePreferenceId:
+      name: preference_id
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/UUID' }
+
 
   responses:
     BadRequest:
@@ -931,3 +1061,43 @@ components:
       properties:
         status: { type: string, enum: [ok, ready, unavailable] }
         database: { type: string, enum: [ok, unavailable] }
+
+    CreateRidePreferenceRequest:
+      type: object
+      required: [source_location_id, destination_location_id]
+      properties:
+        source_location_id: { $ref: '#/components/schemas/UUID' }
+        destination_location_id: { $ref: '#/components/schemas/UUID' }
+        preferred_departure_time: { type: string, format: time, nullable: true, example: "08:30:00" }
+        seats_needed: { type: integer, minimum: 1, default: 1 }
+        is_active: { type: boolean, default: true }
+        label: { type: string, maxLength: 100, nullable: true }
+
+    UpdateRidePreferenceRequest:
+      type: object
+      properties:
+        source_location_id: { $ref: '#/components/schemas/UUID' }
+        destination_location_id: { $ref: '#/components/schemas/UUID' }
+        preferred_departure_time: { type: string, format: time, nullable: true, example: "08:30:00" }
+        seats_needed: { type: integer, minimum: 1, nullable: true }
+        is_active: { type: boolean, nullable: true }
+        label: { type: string, maxLength: 100, nullable: true }
+
+    RidePreferenceResponse:
+      type: object
+      required: [id, rider_id, source_location_id, destination_location_id, seats_needed, is_active, created_at, updated_at]
+      properties:
+        id: { $ref: '#/components/schemas/UUID' }
+        rider_id: { $ref: '#/components/schemas/UUID' }
+        source_location_id: { $ref: '#/components/schemas/UUID' }
+        destination_location_id: { $ref: '#/components/schemas/UUID' }
+        preferred_departure_time: { type: string, format: time, nullable: true }
+        seats_needed: { type: integer, minimum: 1 }
+        is_active: { type: boolean }
+        label: { type: string, maxLength: 100, nullable: true }
+        created_at: { $ref: '#/components/schemas/Timestamp' }
+        updated_at: { $ref: '#/components/schemas/Timestamp' }
+        source: { $ref: '#/components/schemas/Location' }
+        destination: { $ref: '#/components/schemas/Location' }
+        rider: { $ref: '#/components/schemas/PassengerUserResponse' }
+
