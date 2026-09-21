@@ -71,12 +71,21 @@ def ensure_departure_in_future(
         raise PastDepartureError()
 
 
+def determine_booking_status(
+    available_seats: int, requested_seats: int
+) -> BookingStatus:
+    if available_seats >= requested_seats:
+        return BookingStatus.CONFIRMED
+    return BookingStatus.PENDING
+
+
 def ensure_sufficient_seats(available_seats: int, requested_seats: int) -> None:
     if available_seats < requested_seats:
         raise InsufficientSeatsError(
             requested_seats=requested_seats,
             available_seats=available_seats,
         )
+
 
 
 def ensure_stop_exists(

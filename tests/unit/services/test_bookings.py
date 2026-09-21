@@ -105,7 +105,7 @@ def test_create_booking_success(monkeypatch):
         pickup_stop_id=pickup_stop_id,
         dropoff_stop_id=dropoff_stop_id,
         seats_booked=2,
-        status=BookingStatus.PENDING,
+        status=BookingStatus.CONFIRMED,
     )
     captured_booking_create = {}
 
@@ -137,7 +137,7 @@ def test_create_booking_success(monkeypatch):
     assert captured_booking_create["pickup_stop_id"] == pickup_stop_id
     assert captured_booking_create["dropoff_stop_id"] == dropoff_stop_id
     assert captured_booking_create["seats_booked"] == 2
-    assert captured_booking_create["status"] == BookingStatus.PENDING
+    assert captured_booking_create["status"] == BookingStatus.CONFIRMED
 
 
 def test_create_booking_trip_not_found(monkeypatch):
@@ -229,28 +229,107 @@ def test_create_booking_past_departure(monkeypatch):
     assert session.rolled_back is True
 
 
-def test_create_booking_insufficient_seats(monkeypatch):
+def test_create_booking_when_seats_full_creates_pending_booking(monkeypatch):
     session = FakeSession()
     rider_id = uuid4()
+    driver_id = uuid4()
+    route_id = uuid4()
     trip_id = uuid4()
+    pickup_stop_id = uuid4()
+    dropoff_stop_id = uuid4()
 
-    fake_trip = make_fake_trip(trip_id=trip_id, available_seats=1)
-    fake_trip_repo = SimpleNamespace(get_by_id_for_update=lambda s, tid: fake_trip)
+    fake_trip = make_fake_trip(
+        trip_id=trip_id,
+        route_id=route_id,
+        driver_id=driver_id,
+        available_seats=0,
+    )
+    captured_trip_update = {}
+
+    def fake_update(s, trip, **kwargs):
+        captured_trip_update.update(kwargs)
+        for k, v in kwargs.items():
+            if v is not None:
+                setattr(trip, k, v)
+        return trip
+
+    fake_trip_repo = SimpleNamespace(
+        get_by_id_for_update=lambda s, tid: fake_trip,
+        update=fake_update,
+    )
     monkeypatch.setattr(create_booking_service, "get_trip_repo", lambda: fake_trip_repo)
+
+    fake_pickup_stop = SimpleNamespace(id=pickup_stop_id, route_id=route_id, sequence=1)
+    fake_dropoff_stop = SimpleNamespace(id=dropoff_stop_id, route_id=route_id, sequence=3)
+
+    def fake_get_stop(s, stop_id):
+        if stop_id == pickup_stop_id:
+            return fake_pickup_stop
+        if stop_id == dropoff_stop_id:
+            return fake_dropoff_stop
+        return None
+
+    fake_route_stop_repo = SimpleNamespace(get_by_id=fake_get_stop)
+    monkeypatch.setattr(
+        create_booking_service, "get_route_stop_repo", lambda: fake_route_stop_repo
+    )
+
+    fake_booking = SimpleNamespace(
+        id=uuid4(),
+        rider_id=rider_id,
+        trip_id=trip_id,
+        pickup_stop_id=pickup_stop_id,
+        dropoff_stop_id=dropoff_stop_id,
+        seats_booked=2,
+        status=BookingStatus.PENDING,
+    )
+    captured_booking_create = {}
+
+    def fake_create(s, **kwargs):
+        captured_booking_create.update(kwargs)
+        return fake_booking
+
+    fake_booking_repo = SimpleNamespace(create=fake_create)
+    monkeypatch.setattr(
+        create_booking_service, "get_booking_repo", lambda: fake_booking_repo
+    )
 
     payload = CreateBookingRequest(
         trip_id=trip_id,
-        pickup_stop_id=uuid4(),
-        dropoff_stop_id=uuid4(),
+        pickup_stop_id=pickup_stop_id,
+        dropoff_stop_id=dropoff_stop_id,
         seats_booked=2,
     )
 
-    with pytest.raises(InsufficientSeatsError) as exc_info:
-        create_booking_service.create_booking(session, rider_id=rider_id, payload=payload)
+    result = create_booking_service.create_booking(session, rider_id=rider_id, payload=payload)
 
+    assert result == fake_booking
+    assert session.committed is True
+    assert session.rolled_back is False
+    # Available seats should NOT be updated or decremented when pending
+    assert "available_seats" not in captured_trip_update
+    assert fake_trip.available_seats == 0
+    assert captured_booking_create["status"] == BookingStatus.PENDING
+
+
+def test_determine_booking_status_rule():
+    from app.features.bookings.domain.rules import determine_booking_status
+
+    assert determine_booking_status(4, 2) == BookingStatus.CONFIRMED
+    assert determine_booking_status(2, 2) == BookingStatus.CONFIRMED
+    assert determine_booking_status(1, 2) == BookingStatus.PENDING
+    assert determine_booking_status(0, 1) == BookingStatus.PENDING
+
+
+def test_ensure_sufficient_seats_rule():
+    from app.features.bookings.domain.rules import ensure_sufficient_seats
+
+    ensure_sufficient_seats(available_seats=3, requested_seats=2)
+
+    with pytest.raises(InsufficientSeatsError) as exc_info:
+        ensure_sufficient_seats(available_seats=1, requested_seats=2)
     assert exc_info.value.requested_seats == 2
     assert exc_info.value.available_seats == 1
-    assert session.rolled_back is True
 
 
 def test_create_booking_pickup_stop_not_found(monkeypatch):

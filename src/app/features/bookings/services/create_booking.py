@@ -5,12 +5,12 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings, get_settings
 from app.features.bookings.domain.enums import BookingStatus
 from app.features.bookings.domain.rules import (
+    determine_booking_status,
     ensure_departure_in_future,
     ensure_pickup_before_dropoff,
     ensure_rider_is_not_driver,
     ensure_stop_belongs_to_route,
     ensure_stop_exists,
-    ensure_sufficient_seats,
     ensure_trip_exists,
     ensure_trip_is_bookable,
     ensure_valid_seats_booked,
@@ -42,7 +42,6 @@ def create_booking(
         ensure_trip_is_bookable(trip.status)
         ensure_departure_in_future(trip.departure_date, trip.departure_time)
         ensure_valid_seats_booked(payload.seats_booked)
-        ensure_sufficient_seats(trip.available_seats, payload.seats_booked)
 
         pickup_stop = route_stop_repo.get_by_id(session, payload.pickup_stop_id)
         ensure_stop_exists(pickup_stop, stop_id=payload.pickup_stop_id)
@@ -58,8 +57,12 @@ def create_booking(
 
         ensure_pickup_before_dropoff(pickup_stop.sequence, dropoff_stop.sequence)
 
-        new_available_seats = trip.available_seats - payload.seats_booked
-        trip_repo.update(session, trip, available_seats=new_available_seats)
+        booking_status = determine_booking_status(
+            trip.available_seats, payload.seats_booked
+        )
+        if booking_status == BookingStatus.CONFIRMED:
+            new_available_seats = trip.available_seats - payload.seats_booked
+            trip_repo.update(session, trip, available_seats=new_available_seats)
 
         booking = booking_repo.create(
             session,
@@ -68,7 +71,7 @@ def create_booking(
             pickup_stop_id=payload.pickup_stop_id,
             dropoff_stop_id=payload.dropoff_stop_id,
             seats_booked=payload.seats_booked,
-            status=BookingStatus.PENDING,
+            status=booking_status,
         )
 
         session.commit()

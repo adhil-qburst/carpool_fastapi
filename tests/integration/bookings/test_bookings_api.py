@@ -44,7 +44,7 @@ def make_fake_booking(
     pickup_stop_id: UUID | None = None,
     dropoff_stop_id: UUID | None = None,
     seats_booked: int = 2,
-    status: BookingStatus = BookingStatus.PENDING,
+    status: BookingStatus = BookingStatus.CONFIRMED,
 ) -> SimpleNamespace:
     now = datetime.now(timezone.utc)
     p_id = pickup_stop_id or uuid4()
@@ -95,6 +95,7 @@ def test_create_booking_success(auth_client, monkeypatch):
         pickup_stop_id=pickup_id,
         dropoff_stop_id=dropoff_id,
         seats_booked=2,
+        status=BookingStatus.CONFIRMED,
     )
 
     monkeypatch.setattr(
@@ -121,9 +122,47 @@ def test_create_booking_success(auth_client, monkeypatch):
     assert data["pickup_stop_id"] == str(pickup_id)
     assert data["dropoff_stop_id"] == str(dropoff_id)
     assert data["seats_booked"] == 2
-    assert data["status"] == BookingStatus.PENDING.value
+    assert data["status"] == BookingStatus.CONFIRMED.value
     assert "created_at" in data
     assert "updated_at" in data
+
+
+def test_create_booking_success_pending_when_seats_full(auth_client, monkeypatch):
+    trip_id = uuid4()
+    pickup_id = uuid4()
+    dropoff_id = uuid4()
+    booking_id = uuid4()
+
+    fake_booking = make_fake_booking(
+        booking_id=booking_id,
+        rider_id=TEST_USER_ID,
+        trip_id=trip_id,
+        pickup_stop_id=pickup_id,
+        dropoff_stop_id=dropoff_id,
+        seats_booked=2,
+        status=BookingStatus.PENDING,
+    )
+
+    monkeypatch.setattr(
+        bookings,
+        "create_booking",
+        lambda session, rider_id, payload: fake_booking,
+    )
+
+    response = auth_client.post(
+        "/api/v1/bookings",
+        json={
+            "trip_id": str(trip_id),
+            "pickup_stop_id": str(pickup_id),
+            "dropoff_stop_id": str(dropoff_id),
+            "seats_booked": 2,
+        },
+    )
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["id"] == str(booking_id)
+    assert data["status"] == BookingStatus.PENDING.value
 
 
 def test_create_booking_unauthenticated(client):
