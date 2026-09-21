@@ -3,6 +3,8 @@ from uuid import UUID
 
 from app.features.bookings.domain.enums import BookingStatus
 from app.features.bookings.exceptions import (
+    BookingAlreadyCancelledError,
+    BookingCannotBeCancelledError,
     BookingForbiddenError,
     BookingNotFoundError,
     DriverCannotBookOwnTripError,
@@ -108,4 +110,22 @@ def ensure_booking_owner(
 def ensure_valid_pagination(limit: int, offset: int) -> None:
     if limit <= 0 or offset < 0:
         raise InvalidPaginationError(limit=limit, offset=offset)
+
+
+def ensure_booking_can_be_cancelled(
+    current_status: BookingStatus | str,
+    booking_id: UUID | None = None,
+) -> None:
+    status_str = (
+        current_status.value
+        if isinstance(current_status, BookingStatus)
+        else str(current_status)
+    )
+    if status_str == BookingStatus.CANCELLED.value:
+        raise BookingAlreadyCancelledError(booking_id=booking_id)
+    if status_str == BookingStatus.EXPIRED.value:
+        raise BookingCannotBeCancelledError(
+            booking_id=booking_id, status=status_str
+        )
+
 

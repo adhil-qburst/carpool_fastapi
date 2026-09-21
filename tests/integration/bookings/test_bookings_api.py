@@ -9,6 +9,10 @@ from app.db.session import get_db
 from app.features.bookings.api import bookings
 from app.features.bookings.domain.enums import BookingStatus
 from app.features.bookings.exceptions import (
+    BookingAlreadyCancelledError,
+    BookingCannotBeCancelledError,
+    BookingForbiddenError,
+    BookingNotFoundError,
     DriverCannotBookOwnTripError,
     InsufficientSeatsError,
     InvalidBookingSeatsError,
@@ -43,17 +47,34 @@ def make_fake_booking(
     status: BookingStatus = BookingStatus.PENDING,
 ) -> SimpleNamespace:
     now = datetime.now(timezone.utc)
+    p_id = pickup_stop_id or uuid4()
+    d_id = dropoff_stop_id or uuid4()
     return SimpleNamespace(
         id=booking_id or uuid4(),
         rider_id=rider_id or TEST_USER_ID,
         trip_id=trip_id or uuid4(),
-        pickup_stop_id=pickup_stop_id or uuid4(),
-        dropoff_stop_id=dropoff_stop_id or uuid4(),
+        pickup_stop_id=p_id,
+        dropoff_stop_id=d_id,
         seats_booked=seats_booked,
         status=status,
+        pickup_stop=SimpleNamespace(
+            id=p_id,
+            route_id=uuid4(),
+            location_id=uuid4(),
+            sequence=1,
+            location=None,
+        ),
+        dropoff_stop=SimpleNamespace(
+            id=d_id,
+            route_id=uuid4(),
+            location_id=uuid4(),
+            sequence=2,
+            location=None,
+        ),
         created_at=now,
         updated_at=now,
     )
+
 
 
 # =============================================================================
@@ -300,3 +321,88 @@ def test_create_booking_validation_error(auth_client):
         },
     )
     assert response.status_code == 422
+
+
+# =============================================================================
+# DELETE /api/v1/bookings/{booking_id}
+# =============================================================================
+
+
+def test_cancel_booking_success(auth_client, monkeypatch):
+    booking_id = uuid4()
+    cancelled_called = {}
+
+    def fake_cancel_booking(session, *, booking_id, rider_id, settings=None):
+        cancelled_called["booking_id"] = booking_id
+        cancelled_called["rider_id"] = rider_id
+
+    monkeypatch.setattr(bookings, "cancel_booking", fake_cancel_booking)
+
+    response = auth_client.delete(f"/api/v1/bookings/{booking_id}")
+    assert response.status_code == 204
+    assert response.content == b""
+    assert cancelled_called["booking_id"] == booking_id
+    assert cancelled_called["rider_id"] == TEST_USER_ID
+
+
+def test_cancel_booking_unauthenticated(client):
+    response = client.delete(f"/api/v1/bookings/{uuid4()}")
+    assert response.status_code == 401
+
+
+def test_cancel_booking_not_found(auth_client, monkeypatch):
+    booking_id = uuid4()
+
+    def fake_cancel(*args, **kwargs):
+        raise BookingNotFoundError(booking_id=booking_id)
+
+    monkeypatch.setattr(bookings, "cancel_booking", fake_cancel)
+
+    response = auth_client.delete(f"/api/v1/bookings/{booking_id}")
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Booking not found."
+
+
+def test_cancel_booking_forbidden(auth_client, monkeypatch):
+    booking_id = uuid4()
+
+    def fake_cancel(*args, **kwargs):
+        raise BookingForbiddenError(booking_id=booking_id)
+
+    monkeypatch.setattr(bookings, "cancel_booking", fake_cancel)
+
+    response = auth_client.delete(f"/api/v1/bookings/{booking_id}")
+    assert response.status_code == 403
+    assert response.json()["detail"] == "You do not have permission to access or modify this booking."
+
+
+def test_cancel_booking_already_cancelled(auth_client, monkeypatch):
+    booking_id = uuid4()
+
+    def fake_cancel(*args, **kwargs):
+        raise BookingAlreadyCancelledError(booking_id=booking_id)
+
+    monkeypatch.setattr(bookings, "cancel_booking", fake_cancel)
+
+    response = auth_client.delete(f"/api/v1/bookings/{booking_id}")
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Booking is already cancelled."
+
+
+def test_cancel_booking_cannot_be_cancelled(auth_client, monkeypatch):
+    booking_id = uuid4()
+
+    def fake_cancel(*args, **kwargs):
+        raise BookingCannotBeCancelledError(booking_id=booking_id, status="expired")
+
+    monkeypatch.setattr(bookings, "cancel_booking", fake_cancel)
+
+    response = auth_client.delete(f"/api/v1/bookings/{booking_id}")
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Booking with status 'expired' cannot be cancelled."
+
+
+def test_cancel_booking_invalid_uuid(auth_client):
+    response = auth_client.delete("/api/v1/bookings/not-a-valid-uuid")
+    assert response.status_code == 422
+

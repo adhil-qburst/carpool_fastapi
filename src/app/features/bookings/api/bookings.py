@@ -7,6 +7,10 @@ from app.core.security.dependencies import get_current_user_id
 from app.db.session import get_db
 from app.features.bookings.domain.enums import BookingStatus
 from app.features.bookings.exceptions import (
+    BookingAlreadyCancelledError,
+    BookingCannotBeCancelledError,
+    BookingForbiddenError,
+    BookingNotFoundError,
     DriverCannotBookOwnTripError,
     InsufficientSeatsError,
     InvalidBookingSeatsError,
@@ -23,6 +27,7 @@ from app.features.bookings.schemas.booking_response import (
     PaginatedBookingsResponse,
 )
 from app.features.bookings.schemas.create_booking import CreateBookingRequest
+from app.features.bookings.services.cancel_booking import cancel_booking
 from app.features.bookings.services.create_booking import create_booking
 from app.features.bookings.services.list_bookings import list_user_bookings
 
@@ -124,4 +129,47 @@ def list_bookings(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=exc.detail,
         ) from exc
+
+
+@router.delete(
+    "/{booking_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def cancel_booking_endpoint(
+    booking_id: UUID,
+    db: Session = Depends(get_db),
+    current_user_id: UUID = Depends(get_current_user_id),
+) -> None:
+    try:
+        cancel_booking(
+            session=db,
+            booking_id=booking_id,
+            rider_id=current_user_id,
+        )
+    except BookingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=exc.detail,
+        ) from exc
+    except TripNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=exc.detail,
+        ) from exc
+    except BookingForbiddenError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=exc.detail,
+        ) from exc
+    except BookingAlreadyCancelledError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=exc.detail,
+        ) from exc
+    except BookingCannotBeCancelledError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=exc.detail,
+        ) from exc
+
 

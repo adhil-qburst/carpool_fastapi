@@ -114,3 +114,27 @@ class InvalidPaginationError(AppError):
             "INVALID_PAGINATION",
         )
 
+
+class BookingAlreadyCancelledError(AppError):
+    def __init__(self, booking_id: UUID | None = None) -> None:
+        self.booking_id = booking_id
+        super().__init__(
+            "Booking is already cancelled.",
+            "BOOKING_ALREADY_CANCELLED",
+        )
+
+
+class BookingCannotBeCancelledError(AppError):
+    def __init__(
+        self, booking_id: UUID | None = None, status: str | None = None
+    ) -> None:
+        self.booking_id = booking_id
+        self.status = status
+        detail = (
+            f"Booking with status '{status}' cannot be cancelled."
+            if status
+            else "Booking cannot be cancelled."
+        )
+        super().__init__(detail, "BOOKING_CANNOT_BE_CANCELLED")
+
+
