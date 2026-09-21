@@ -7,6 +7,9 @@ import pytest
 from app.core.security.dependencies import get_current_user_id
 from app.db.session import get_db
 from app.features.trips.api import trips
+from app.features.bookings.domain.enums import BookingStatus
+from app.features.location.schemas.location_response import LocationResponse
+from app.features.routes.schemas.route_response import RouteStopResponse
 from app.features.trips.domain.enums import TripStatus
 from app.features.trips.exceptions import (
     InvalidAvailableSeatsError,
@@ -17,6 +20,10 @@ from app.features.trips.exceptions import (
     TripCannotBeModifiedError,
     TripForbiddenError,
     TripNotFoundError,
+)
+from app.features.trips.schemas.passenger_response import (
+    PassengerResponse,
+    PassengerUserResponse,
 )
 from app.main import app
 
@@ -440,4 +447,142 @@ def test_search_trips_api_invalid_pagination(client, monkeypatch):
 
     assert response.status_code == 400
     assert "Limit must be greater than 0" in response.json()["detail"]
+
+
+# =============================================================================
+# GET /api/v1/trips/{trip_id}/passengers
+# =============================================================================
+
+
+def make_fake_passenger(
+    booking_id: UUID | None = None,
+    rider_id: UUID | None = None,
+    rider_name: str = "Charlie Davis",
+    rider_email: str = "charlie@example.com",
+    seats_booked: int = 1,
+    status: BookingStatus = BookingStatus.CONFIRMED,
+):
+    b_id = booking_id or uuid4()
+    r_id = rider_id or uuid4()
+    now = datetime.now(timezone.utc)
+    return PassengerResponse(
+        id=b_id,
+        booking_id=b_id,
+        rider_id=r_id,
+        rider_name=rider_name,
+        rider_email=rider_email,
+        rider=PassengerUserResponse(id=r_id, name=rider_name, email=rider_email),
+        seats_booked=seats_booked,
+        status=status,
+        pickup_stop=RouteStopResponse(
+            id=uuid4(),
+            route_id=uuid4(),
+            location_id=uuid4(),
+            sequence=1,
+            location=LocationResponse(
+                id=uuid4(),
+                name="Stop A",
+                city="Metropolis",
+                lat=12.97,
+                lng=77.59,
+                status="active",
+                created_at=now,
+                updated_at=now,
+            ),
+        ),
+        dropoff_stop=RouteStopResponse(
+            id=uuid4(),
+            route_id=uuid4(),
+            location_id=uuid4(),
+            sequence=2,
+            location=LocationResponse(
+                id=uuid4(),
+                name="Stop B",
+                city="Gotham",
+                lat=12.98,
+                lng=77.60,
+                status="active",
+                created_at=now,
+                updated_at=now,
+            ),
+        ),
+        created_at=now,
+        updated_at=now,
+    )
+
+
+def test_list_trip_passengers_api_success(auth_client, monkeypatch):
+    trip_id = uuid4()
+    passenger_1 = make_fake_passenger(rider_name="Alice Walker", status=BookingStatus.CONFIRMED)
+    passenger_2 = make_fake_passenger(rider_name="Bob Stone", status=BookingStatus.PENDING)
+
+    def fake_list_passengers(*args, **kwargs):
+        return [passenger_1, passenger_2]
+
+    monkeypatch.setattr(trips, "list_trip_passengers", fake_list_passengers)
+
+    response = auth_client.get(f"/api/v1/trips/{trip_id}/passengers")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 2
+    assert data[0]["booking_id"] == str(passenger_1.booking_id)
+    assert data[0]["rider_name"] == "Alice Walker"
+    assert data[0]["status"] == "confirmed"
+    assert data[0]["rider"]["name"] == "Alice Walker"
+    assert data[0]["pickup_stop"]["location"]["name"] == "Stop A"
+    assert data[1]["booking_id"] == str(passenger_2.booking_id)
+    assert data[1]["status"] == "pending"
+
+
+def test_list_trip_passengers_api_with_status_filter(auth_client, monkeypatch):
+    trip_id = uuid4()
+    captured = {}
+
+    def fake_list_passengers(session, trip_id, driver_id, status=None, **kwargs):
+        captured["status"] = status
+        return [make_fake_passenger(status=BookingStatus.CONFIRMED)]
+
+    monkeypatch.setattr(trips, "list_trip_passengers", fake_list_passengers)
+
+    response = auth_client.get(f"/api/v1/trips/{trip_id}/passengers", params={"status": "confirmed"})
+
+    assert response.status_code == 200
+    assert captured["status"] == BookingStatus.CONFIRMED
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["status"] == "confirmed"
+
+
+def test_list_trip_passengers_api_unauthorized(client):
+    trip_id = uuid4()
+    response = client.get(f"/api/v1/trips/{trip_id}/passengers")
+    assert response.status_code == 401
+
+
+def test_list_trip_passengers_api_forbidden(auth_client, monkeypatch):
+    trip_id = uuid4()
+
+    def fake_list_passengers(*args, **kwargs):
+        raise TripForbiddenError(trip_id=trip_id, user_id=TEST_USER_ID)
+
+    monkeypatch.setattr(trips, "list_trip_passengers", fake_list_passengers)
+
+    response = auth_client.get(f"/api/v1/trips/{trip_id}/passengers")
+    assert response.status_code == 403
+    assert "permission" in response.json()["detail"].lower()
+
+
+def test_list_trip_passengers_api_not_found(auth_client, monkeypatch):
+    trip_id = uuid4()
+
+    def fake_list_passengers(*args, **kwargs):
+        raise TripNotFoundError(trip_id=trip_id)
+
+    monkeypatch.setattr(trips, "list_trip_passengers", fake_list_passengers)
+
+    response = auth_client.get(f"/api/v1/trips/{trip_id}/passengers")
+    assert response.status_code == 404
+    assert "Trip not found" in response.json()["detail"]
+
 

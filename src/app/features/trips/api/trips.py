@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security.dependencies import get_current_user_id
 from app.db.session import get_db
+from app.features.bookings.domain.enums import BookingStatus
 from app.features.trips.domain.enums import TripStatus
 from app.features.trips.exceptions import (
     IdenticalSourceDestinationError,
@@ -22,6 +23,7 @@ from app.features.trips.exceptions import (
     VehicleSeatsExceededError,
 )
 from app.features.trips.schemas.create_trip import CreateTripRequest
+from app.features.trips.schemas.passenger_response import PassengerResponse
 from app.features.trips.schemas.search_trips import (
     SearchTripsRequest,
     SearchTripsResponse,
@@ -34,6 +36,7 @@ from app.features.trips.schemas.update_trip import UpdateTripRequest
 from app.features.trips.services.create_trip import create_trip
 from app.features.trips.services.delete_trip import delete_trip
 from app.features.trips.services.get_trip import get_trip
+from app.features.trips.services.list_passengers import list_trip_passengers
 from app.features.trips.services.list_trips import list_driver_trips
 from app.features.trips.services.search_trips import search_trips
 from app.features.trips.services.update_trip import update_trip
@@ -194,6 +197,36 @@ def get_trip_by_id(
             session=db,
             trip_id=trip_id,
             driver_id=current_user_id,
+        )
+    except TripNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=exc.detail,
+        ) from exc
+    except TripForbiddenError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=exc.detail,
+        ) from exc
+
+
+@router.get(
+    "/{trip_id}/passengers",
+    status_code=status.HTTP_200_OK,
+    response_model=list[PassengerResponse],
+)
+def list_trip_passengers_endpoint(
+    trip_id: UUID,
+    passenger_status: BookingStatus | None = Query(default=None, alias="status"),
+    db: Session = Depends(get_db),
+    current_user_id: UUID = Depends(get_current_user_id),
+) -> list[PassengerResponse]:
+    try:
+        return list_trip_passengers(
+            session=db,
+            trip_id=trip_id,
+            driver_id=current_user_id,
+            status=passenger_status,
         )
     except TripNotFoundError as exc:
         raise HTTPException(

@@ -231,6 +231,32 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/PaginatedTrips' }
 
+  /trips/{tripId}/passengers:
+    get:
+      tags: [Trips]
+      summary: List passengers for a trip
+      operationId: listTripPassengers
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: tripId
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/UUID' }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/BookingStatus' }
+      responses:
+        '200':
+          description: List of passengers on the trip
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/PassengerResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /search:
     post:
       tags: [Search]
@@ -815,6 +841,31 @@ components:
         pickup_stop_id: { $ref: '#/components/schemas/UUID' }
         dropoff_stop_id: { $ref: '#/components/schemas/UUID' }
         seats_booked: { type: integer, minimum: 1 }
+
+    PassengerUserResponse:
+      type: object
+      required: [id, name, email]
+      properties:
+        id: { $ref: '#/components/schemas/UUID' }
+        name: { type: string }
+        email: { type: string, format: email }
+
+    PassengerResponse:
+      type: object
+      required: [id, booking_id, rider_id, rider_name, rider_email, rider, seats_booked, status, pickup_stop, dropoff_stop, created_at, updated_at]
+      properties:
+        id: { $ref: '#/components/schemas/UUID' }
+        booking_id: { $ref: '#/components/schemas/UUID' }
+        rider_id: { $ref: '#/components/schemas/UUID' }
+        rider_name: { type: string }
+        rider_email: { type: string, format: email }
+        rider: { $ref: '#/components/schemas/PassengerUserResponse' }
+        seats_booked: { type: integer, minimum: 1 }
+        status: { $ref: '#/components/schemas/BookingStatus' }
+        pickup_stop: { $ref: '#/components/schemas/RouteStop' }
+        dropoff_stop: { $ref: '#/components/schemas/RouteStop' }
+        created_at: { $ref: '#/components/schemas/Timestamp' }
+        updated_at: { $ref: '#/components/schemas/Timestamp' }
 
     Review:
       type: object
