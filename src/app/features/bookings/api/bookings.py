@@ -1,14 +1,16 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.security.dependencies import get_current_user_id
 from app.db.session import get_db
+from app.features.bookings.domain.enums import BookingStatus
 from app.features.bookings.exceptions import (
     DriverCannotBookOwnTripError,
     InsufficientSeatsError,
     InvalidBookingSeatsError,
+    InvalidPaginationError,
     InvalidStopSequenceError,
     PastDepartureError,
     RouteStopNotFoundError,
@@ -16,9 +18,13 @@ from app.features.bookings.exceptions import (
     TripNotAvailableForBookingError,
     TripNotFoundError,
 )
-from app.features.bookings.schemas.booking_response import BookingResponse
+from app.features.bookings.schemas.booking_response import (
+    BookingResponse,
+    PaginatedBookingsResponse,
+)
 from app.features.bookings.schemas.create_booking import CreateBookingRequest
 from app.features.bookings.services.create_booking import create_booking
+from app.features.bookings.services.list_bookings import list_user_bookings
 
 router = APIRouter()
 
@@ -84,3 +90,38 @@ def create_new_booking(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=exc.detail,
         ) from exc
+
+
+@router.get(
+    "",
+    status_code=status.HTTP_200_OK,
+    response_model=PaginatedBookingsResponse,
+)
+def list_bookings(
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=20, ge=1, le=100),
+    booking_status: BookingStatus | None = Query(default=None, alias="status"),
+    db: Session = Depends(get_db),
+    current_user_id: UUID = Depends(get_current_user_id),
+) -> PaginatedBookingsResponse:
+    offset = (page - 1) * limit
+    try:
+        items, total = list_user_bookings(
+            session=db,
+            rider_id=current_user_id,
+            status=booking_status,
+            limit=limit,
+            offset=offset,
+        )
+        return PaginatedBookingsResponse(
+            items=items,
+            page=page,
+            limit=limit,
+            total=total,
+        )
+    except InvalidPaginationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=exc.detail,
+        ) from exc
+

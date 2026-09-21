@@ -8,6 +8,7 @@ from app.features.bookings.exceptions import (
     DriverCannotBookOwnTripError,
     InsufficientSeatsError,
     InvalidBookingSeatsError,
+    InvalidPaginationError,
     InvalidStopSequenceError,
     PastDepartureError,
     RouteStopNotFoundError,
@@ -102,3 +103,9 @@ def ensure_booking_owner(
 ) -> None:
     if booking_rider_id != rider_id:
         raise BookingForbiddenError(booking_id=booking_id, user_id=rider_id)
+
+
+def ensure_valid_pagination(limit: int, offset: int) -> None:
+    if limit <= 0 or offset < 0:
+        raise InvalidPaginationError(limit=limit, offset=offset)
+

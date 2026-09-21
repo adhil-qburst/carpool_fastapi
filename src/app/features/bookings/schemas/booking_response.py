@@ -1,7 +1,8 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from app.features.routes.schemas.route_response import RouteStopResponse
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.features.bookings.domain.enums import BookingStatus
 
@@ -16,5 +17,15 @@ class BookingResponse(BaseModel):
     dropoff_stop_id: UUID
     seats_booked: int
     status: BookingStatus
+    pickup_stop: RouteStopResponse
+    dropoff_stop: RouteStopResponse
     created_at: datetime
     updated_at: datetime
+
+
+class PaginatedBookingsResponse(BaseModel):
+    items: list[BookingResponse]
+    page: int = Field(..., ge=1)
+    limit: int = Field(..., ge=1)
+    total: int = Field(..., ge=0)
+

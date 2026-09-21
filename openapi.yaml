@@ -250,6 +250,26 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /bookings:
+    get:
+      tags: [Bookings]
+      summary: List bookings for the authenticated user
+      operationId: listBookings
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/BookingStatus' }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200':
+          description: List of bookings belonging to the authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBookings'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
     post:
       tags: [Bookings]
       summary: Book seats on a trip
@@ -826,6 +846,16 @@ components:
         items:
           type: array
           items: { $ref: '#/components/schemas/Route' }
+        page: { type: integer }
+        limit: { type: integer }
+        total: { type: integer }
+    PaginatedBookings:
+      type: object
+      required: [items, page, limit, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Booking' }
         page: { type: integer }
         limit: { type: integer }
         total: { type: integer }

@@ -12,6 +12,7 @@ from app.features.bookings.exceptions import (
     DriverCannotBookOwnTripError,
     InsufficientSeatsError,
     InvalidBookingSeatsError,
+    InvalidPaginationError,
     InvalidStopSequenceError,
     PastDepartureError,
     RouteStopNotFoundError,
