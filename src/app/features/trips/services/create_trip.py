@@ -19,6 +19,7 @@ from app.features.vehicles.domain.rules import (
     ensure_vehicle_owner,
 )
 from app.features.vehicles.repositories.vehicles import get_vehicle_repo
+from app.tasks.notification_tasks import process_trip_notification_task
 
 
 def create_trip(
@@ -61,6 +62,7 @@ def create_trip(
             available_seats=available_seats,
         )
         session.commit()
+        process_trip_notification_task.send(str(trip.id))
         return trip
     except Exception:
         session.rollback()

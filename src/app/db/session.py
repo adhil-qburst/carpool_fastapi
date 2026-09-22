@@ -1,8 +1,10 @@
 from collections.abc import Generator
+from contextlib import contextmanager
 
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
+import app.db.all_models  # noqa: F401  # registers all mapped classes
 from app.core.config import get_settings
 
 _engine: Engine | None = None
@@ -30,6 +32,14 @@ def get_session_factory() -> sessionmaker[Session]:
 
 
 def get_db() -> Generator[Session, None, None]:
+    db = get_session_factory()()
+    try:
+        yield db
+    finally:
+        db.close()
+        
+@contextmanager
+def get_db_context():
     db = get_session_factory()()
     try:
         yield db

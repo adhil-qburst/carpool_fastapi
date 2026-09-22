@@ -8,6 +8,7 @@ class NotificationType(StrEnum):
     BOOKING_REJECTED = "booking_rejected"
     TRIP_CANCELLED = "trip_cancelled"
     TRIP_UPDATED = "trip_updated"
+    TRIP_CREATED = "trip_created"
     SYSTEM = "system"
 
 

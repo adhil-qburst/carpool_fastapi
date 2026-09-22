@@ -8,6 +8,7 @@ import app.features.trips.services.create_trip as create_trip_service
 import app.features.trips.services.delete_trip as delete_trip_service
 import app.features.trips.services.get_trip as get_trip_service
 import app.features.trips.services.list_trips as list_trips_service
+import app.features.trips.services.process_trip_created_notiifcation as notif_service
 import app.features.trips.services.search_trips as search_trips_service
 import app.features.trips.services.update_trip as update_trip_service
 from app.features.routes.domain.enums import RouteStatus
@@ -706,6 +707,124 @@ def test_trip_repo_search_ignores_seats_needed():
     assert session.scalars.call_count == 1
     query = session.scalars.call_args[0][0]
     assert "available_seats" not in str(query.whereclause)
+
+
+# =============================================================================
+# process_trip_created_notification
+# =============================================================================
+
+
+def test_process_trip_created_notification_not_found(monkeypatch):
+    session = FakeSession()
+    trip_id = uuid4()
+    fake_repo = SimpleNamespace(get_by_id=lambda s, trip_id: None)
+    monkeypatch.setattr(notif_service, "get_trip_repo", lambda: fake_repo)
+
+    result = notif_service.process_trip_created_notification(session, trip_id=trip_id)
+    assert result == []
+    assert session.committed is True
+
+
+def test_process_trip_created_notification_status_not_scheduled(monkeypatch):
+    session = FakeSession()
+    trip_id = uuid4()
+    fake_trip = make_fake_trip(trip_id=trip_id, status=TripStatus.CANCELLED)
+    fake_repo = SimpleNamespace(get_by_id=lambda s, trip_id: fake_trip)
+    monkeypatch.setattr(notif_service, "get_trip_repo", lambda: fake_repo)
+
+    result = notif_service.process_trip_created_notification(session, trip_id=trip_id)
+    assert result == []
+    assert session.committed is True
+
+
+def test_process_trip_created_notification_insufficient_stops(monkeypatch):
+    session = FakeSession()
+    trip_id = uuid4()
+    fake_trip = make_fake_trip(trip_id=trip_id, status=TripStatus.SCHEDULED)
+    fake_trip.route = SimpleNamespace(route_stops=[])
+    fake_repo = SimpleNamespace(get_by_id=lambda s, trip_id: fake_trip)
+    monkeypatch.setattr(notif_service, "get_trip_repo", lambda: fake_repo)
+
+    result = notif_service.process_trip_created_notification(session, trip_id=trip_id)
+    assert result == []
+    assert session.committed is True
+
+
+def test_process_trip_created_notification_success_dedup_and_driver_exclusion(monkeypatch):
+    session = FakeSession()
+    trip_id = uuid4()
+    driver_id = uuid4()
+    rider_1_id = uuid4()
+    rider_2_id = uuid4()
+
+    loc_a_id = uuid4()
+    loc_b_id = uuid4()
+    loc_c_id = uuid4()
+
+    stop_a = SimpleNamespace(sequence=1, location_id=loc_a_id, location=SimpleNamespace(name="Loc A"))
+    stop_b = SimpleNamespace(sequence=2, location_id=loc_b_id, location=SimpleNamespace(name="Loc B"))
+    stop_c = SimpleNamespace(sequence=3, location_id=loc_c_id, location=SimpleNamespace(name="Loc C"))
+
+    fake_trip = make_fake_trip(trip_id=trip_id, driver_id=driver_id, status=TripStatus.SCHEDULED)
+    fake_trip.route = SimpleNamespace(route_stops=[stop_c, stop_a, stop_b])  # Unsorted
+
+    fake_trip_repo = SimpleNamespace(get_by_id=lambda s, trip_id: fake_trip)
+    monkeypatch.setattr(notif_service, "get_trip_repo", lambda: fake_trip_repo)
+
+    # Preferences:
+    # A -> B matches rider 1
+    # A -> C matches rider 1 (duplicate rider!) and driver (driver excluded!) and rider 2
+    pref_rider_1_ab = SimpleNamespace(
+        id=uuid4(), rider_id=rider_1_id, source=SimpleNamespace(name="Loc A"), destination=SimpleNamespace(name="Loc B")
+    )
+    pref_rider_1_ac = SimpleNamespace(
+        id=uuid4(), rider_id=rider_1_id, source=SimpleNamespace(name="Loc A"), destination=SimpleNamespace(name="Loc C")
+    )
+    pref_driver_ac = SimpleNamespace(
+        id=uuid4(), rider_id=driver_id, source=SimpleNamespace(name="Loc A"), destination=SimpleNamespace(name="Loc C")
+    )
+    pref_rider_2_ac = SimpleNamespace(
+        id=uuid4(), rider_id=rider_2_id, source=SimpleNamespace(name="Loc A"), destination=SimpleNamespace(name="Loc C")
+    )
+
+    def fake_list_active(s, *, source_location_id, destination_location_id):
+        if source_location_id == loc_a_id and destination_location_id == loc_b_id:
+            return [pref_rider_1_ab]
+        if source_location_id == loc_a_id and destination_location_id == loc_c_id:
+            return [pref_rider_1_ac, pref_driver_ac, pref_rider_2_ac]
+        return []
+
+    fake_pref_repo = SimpleNamespace(list_active_by_locations=fake_list_active)
+    monkeypatch.setattr(notif_service, "get_ride_preference_repo", lambda: fake_pref_repo)
+
+    created_notifs = []
+
+    def fake_create_notif(s, **kwargs):
+        notif = SimpleNamespace(**kwargs)
+        created_notifs.append(notif)
+        return notif
+
+    fake_notif_repo = SimpleNamespace(create=fake_create_notif)
+    monkeypatch.setattr(notif_service, "get_notification_repo", lambda: fake_notif_repo)
+
+    result = notif_service.process_trip_created_notification(session, trip_id=trip_id)
+
+    # Rider 1 should be notified once (even though matched A->B and A->C)
+    # Driver should NOT be notified
+    # Rider 2 should be notified once
+    assert len(result) == 2
+    assert session.committed is True
+    user_ids = [n.user_id for n in result]
+    assert rider_1_id in user_ids
+    assert rider_2_id in user_ids
+    assert driver_id not in user_ids
+
+
+def test_process_trip_created_notification_invalid_uuid():
+    session = FakeSession()
+    result = notif_service.process_trip_created_notification(session, trip_id="invalid-uuid")
+    assert result == []
+
 
 
 
